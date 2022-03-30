@@ -48,7 +48,6 @@ class SoftAttention(nn.Module):
         # (batch_size, max_len, 7, 7)
         return context
         
-
 # Self-attention layer
 class SelfAttention(nn.Module):
     ''' Scaled Dot-Product Attention '''
