@@ -22,31 +22,37 @@ class Encoder(nn.Module):
 
 # SoftAttention
 class SoftAttention(nn.Module):
-    def __init__(self, encoder_dim, decoder_dim, vocab_size):
-        super(SoftAttention, self).__init__()
-        self.encoder_dim = encoder_dim
-        self.decoder_dim = decoder_dim
-        self.vocab_size = vocab_size
-        self.linear = nn.Linear(encoder_dim, decoder_dim)
+    """
+    Attention Network.
+    """
+
+    def __init__(self, encoder_dim, decoder_dim, attention_dim):
+        """
+        :param encoder_dim: feature size of encoded images
+        :param decoder_dim: size of decoder's RNN
+        :param attention_dim: size of the attention network
+        """
+        super(Attention, self).__init__()
+        self.encoder_att = nn.Linear(encoder_dim, attention_dim)
+        self.decoder_att = nn.Linear(decoder_dim, attention_dim)
+        self.full_att = nn.Linear(attention_dim, 1)
+        self.relu = nn.ReLU()
         self.softmax = nn.Softmax(dim=1)
-    
-    def forward(self, features, captions):
-        # features: (batch_size, 7, 7, 2048)
-        # captions: (batch_size, max_len, vocab_size)
-        batch_size = features.size(0)
-        max_len = captions.size(1)
-        # (batch_size, max_len, decoder_dim)
-        embeddings = self.linear(features.view(batch_size, -1))
-        # (batch_size, max_len, decoder_dim)
-        embeddings = embeddings.view(batch_size, max_len, self.decoder_dim)
-        # (batch_size, max_len, decoder_dim)
-        attention = torch.bmm(captions, embeddings)
-        # (batch_size, max_len, 7, 7)
-        attention = F.softmax(attention, dim=1)
-        # (batch_size, max_len, 7, 7)
-        context = torch.bmm(attention, features)
-        # (batch_size, max_len, 7, 7)
-        return context
+
+    def forward(self, encoder_out, decoder_hidden):
+        """
+        Forward propagation.
+        :param encoder_out: encoded images, a tensor of dimension (batch_size, num_pixels, encoder_dim)
+        :param decoder_hidden: previous decoder output, a tensor of dimension (batch_size, decoder_dim)
+        :return: attention weighted encoding, weights
+        """
+        att1 = self.encoder_att(encoder_out)  # (batch_size, num_pixels, attention_dim)
+        att2 = self.decoder_att(decoder_hidden)  # (batch_size, attention_dim)
+        att = self.full_att(self.relu(att1 + att2.unsqueeze(1))).squeeze(2)  # (batch_size, num_pixels)
+        alpha = self.softmax(att)  # (batch_size, num_pixels)
+        attention_weighted_encoding = (encoder_out * alpha.unsqueeze(2)).sum(dim=1)  # (batch_size, encoder_dim)
+
+        return attention_weighted_encoding, alpha
         
 
 # Self-attention layer
