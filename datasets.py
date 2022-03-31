@@ -12,11 +12,11 @@ import json
 
 
 class ImageCaptionDataset(Dataset):
-    def __init__(self, karpathy_json_path, image_folder, max_seq_len=256, transform=None, phase="train"):
+    def __init__(self, karpathy_json_path, image_dir, tokenizer, max_seq_len=256, transform=None, phase="train"):
         self.transform = transform
-        self.tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
+        self.tokenizer = tokenizer
         self.karpathy_json_path = karpathy_json_path
-        self.image_folder = image_folder
+        self.image_dir = image_dir
         self.max_seq_len = max_seq_len
         self.phase = phase
         self.df = self.create_inputs()
@@ -25,7 +25,7 @@ class ImageCaptionDataset(Dataset):
         df = []
         data = json.load(open(self.karpathy_json_path, "r"))
         for image in data["images"]:
-            image_path = os.path.join(self.image_folder, image["filepath"], image["filename"])
+            image_path = os.path.join(self.image_dir, image["filepath"], image["filename"])
             for c in image["sentences"]:
                 caption = " ".join(c["tokens"])
                 if self.phase == "train" and image["split"] in {"train", "restval"}:
@@ -47,11 +47,13 @@ class ImageCaptionDataset(Dataset):
         image = Image.fromarray(image.astype('uint8')).convert('RGB')
         if self.transform is not None:
             image = self.transform(image)
-        print(image.shape)
+
         caption = self.df.iloc[index]["caption"]
         tokens = self.tokenizer(caption, max_length=self.max_seq_len, padding="max_length", truncation=True, return_tensors="pt")["input_ids"][0]
-        import ipdb; ipdb.set_trace()
-        return image, torch.LongTensor(tokens)
+        return {
+            "image": image,
+            "caption": torch.LongTensor(tokens)
+        }
 
 # Test
 if __name__ == "__main__":
@@ -61,11 +63,27 @@ if __name__ == "__main__":
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
-    dataset = ImageCaptionDataset(
+    
+    tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
+    valid_dataset = ImageCaptionDataset(
         karpathy_json_path="../coco/dataset_coco.json", 
-        image_folder="./coco/coco_images/", 
+        image_dir="./coco/coco_images/", 
+        tokenizer=tokenizer,
         max_seq_len=128,
         transform=transform, 
-        phase="test"
+        phase="val"
     )
-    dataset[0]
+    
+    valid_loader = torch.utils.data.DataLoader(
+        valid_dataset,
+        batch_size=4,
+        shuffle=False
+    )
+
+    for batch in valid_loader:
+        image = batch["image"]
+        caption = batch["caption"]
+        print(image.shape)
+        print(caption.shape)
+        import ipdb; ipdb.set_trace()
+        break
