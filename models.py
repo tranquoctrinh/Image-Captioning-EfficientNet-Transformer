@@ -202,7 +202,6 @@ class Decoder(nn.Module):
 class ImageCaptionModel(nn.Module):
     def __init__(self, embedding_dim, attention_dim, vocab_size, max_seq_len, num_layers, num_heads, dropout=0.1):
         super(ImageCaptionModel, self).__init__()
-        self.position_embedding = PositionalEncoder(embedding_dim, max_seq_len, dropout)
         self.encoder = Encoder()
         self.decoder = Decoder(embedding_dim, attention_dim, vocab_size, max_seq_len, num_layers, num_heads, dropout)
         self.embed = nn.Embedding(vocab_size, embedding_dim)
@@ -245,6 +244,6 @@ def main():
     model = ImageCaptionModel(embedding_dim=512, attention_dim=256, vocab_size=vocab_size, max_seq_len=max_seq_len, num_layers=8, num_heads=8, dropout=0.1)
     out = model(torch.randn(batch_size, 3, 224, 224), torch.randint(0, vocab_size, (batch_size, max_seq_len)))
     print(out.size())
-    
+
 if __name__ == "__main__":
     main()
