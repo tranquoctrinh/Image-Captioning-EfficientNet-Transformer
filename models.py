@@ -198,7 +198,7 @@ class Decoder(nn.Module):
         return x
 
 # Model image captioning with Attention
-class ImageCaptioning(nn.Module):
+class ImageCaptionModel(nn.Module):
     def __init__(self, embedding_dim=512, attention_dim=256, vocab_size=0, max_seq_len=256, num_layers=8, num_heads=8, dropout=0.1):
         super(ImageCaptioning, self).__init__()
         self.position_embedding = PositionalEncoder(embedding_dim, max_seq_len, dropout)
