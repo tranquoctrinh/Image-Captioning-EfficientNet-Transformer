@@ -26,15 +26,15 @@ class ImageCaptionDataset(Dataset):
         data = json.load(open(self.karpathy_json_path, "r"))
         for image in data["images"]:
             image_path = os.path.join(self.image_dir, image["filepath"], image["filename"])
-            for c in image["sentences"]:
-                caption = " ".join(c["tokens"])
+            captions = [" ".join(c["tokens"]) for c in image["sentences"]]
+            for caption in captions:
                 if self.phase == "train" and image["split"] in {"train", "restval"}:
-                    df.append({"image_path": image_path, "caption": caption})
+                    df.append({"image_path": image_path, "caption": caption, "all_captions": captions+[""]*(10-len(captions))})
                 elif self.phase == "val" and image["split"] in {"val"}:
-                    df.append({"image_path": image_path, "caption": caption})
+                    df.append({"image_path": image_path, "caption": caption, "all_captions": captions+[""]*(10-len(captions))})
                 elif self.phase == "test" and image["split"] in {"test"}:
-                    df.append({"image_path": image_path, "caption": caption})
-        return pd.DataFrame(df)
+                    df.append({"image_path": image_path, "caption": caption, "all_captions": captions+[""]*(10-len(captions))})
+        return pd.DataFrame(df).sample(frac=0.0001).reset_index(drop=True)
 
     def __len__(self):
         return len(self.df)
@@ -48,11 +48,16 @@ class ImageCaptionDataset(Dataset):
         if self.transform is not None:
             image = self.transform(image)
 
-        caption = self.df.iloc[index]["caption"]
-        tokens = self.tokenizer(caption, max_length=self.max_seq_len, padding="max_length", truncation=True, return_tensors="pt")["input_ids"][0]
+        caption = self.df.loc[index, "caption"]
+        caption_tokens = self.tokenizer(caption, max_length=self.max_seq_len, padding="max_length", truncation=True, return_tensors="pt")["input_ids"][0]
+        all_captions = self.df.loc[index, "all_captions"]
+        all_captions_tokens = self.tokenizer(all_captions, max_length=self.max_seq_len, padding="max_length", truncation=True, return_tensors="pt")["input_ids"]
         return {
             "image": image,
-            "caption": torch.LongTensor(tokens)
+            "caption_seq": caption,
+            "caption": caption_tokens,
+            "all_captions_seq": all_captions,
+            "all_captions": all_captions_tokens
         }
 
 # Test
@@ -65,25 +70,12 @@ if __name__ == "__main__":
     ])
     
     tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
-    valid_dataset = ImageCaptionDataset(
+    train_dataset = ImageCaptionDataset(
         karpathy_json_path="../coco/dataset_coco.json", 
         image_dir="./coco/coco_images/", 
         tokenizer=tokenizer,
         max_seq_len=128,
         transform=transform, 
-        phase="val"
+        phase="train"
     )
-    
-    valid_loader = torch.utils.data.DataLoader(
-        valid_dataset,
-        batch_size=4,
-        shuffle=False
-    )
-
-    for batch in valid_loader:
-        image = batch["image"]
-        caption = batch["caption"]
-        print(image.shape)
-        print(caption.shape)
-        import ipdb; ipdb.set_trace()
-        break
+    print(dataset[0])

@@ -29,12 +29,12 @@ class Norm(nn.Module):
 
 # The positional encoding vector
 class PositionalEncoder(nn.Module):
-    def __init__(self, embedding_dim, max_seq_length=512, dropout=0.1):
+    def __init__(self, embedding_dim, max_seq_len=512, dropout=0.1):
         super(PositionalEncoder, self).__init__()
         self.embedding_dim = embedding_dim
         self.dropout = nn.Dropout(dropout)
-        pe = torch.zeros(max_seq_length, embedding_dim)
-        for pos in range(max_seq_length):
+        pe = torch.zeros(max_seq_len, embedding_dim)
+        for pos in range(max_seq_len):
             for i in range(0, embedding_dim, 2):
                 pe[pos, i] = math.sin(pos/(10000**(2*i/embedding_dim)))
                 pe[pos, i+1] = math.cos(pos/(10000**((2*i+1)/embedding_dim)))
@@ -129,7 +129,7 @@ class SoftAttention(nn.Module):
     def __init__(self, encoder_dim, decoder_dim, attention_dim):
         super(SoftAttention, self).__init__()
         self.encoder_dim = encoder_dim
-        self.encoder_att = nn.Linear(encoder_dim, attention_dim)
+        self.encoder_att = nn.Linear(2048, attention_dim)
         self.decoder_att = nn.Linear(decoder_dim, attention_dim)
         self.full_att = nn.Linear(attention_dim, 1)
         self.relu = nn.ReLU()
@@ -137,11 +137,12 @@ class SoftAttention(nn.Module):
 
     def forward(self, memory, decoder_hidden):
         batch_size = memory.size(0) # batch size
-        memory = memory.view(batch_size, -1, self.encoder_dim)  # (batch_size, num_pixels, encoder_dim)
+        memory = memory.reshape(batch_size, -1, 2048)  # (batch_size, num_pixels, encoder_dim)
         att1 = self.encoder_att(memory)  # (batch_size, num_pixels, attention_dim)
         att2 = self.decoder_att(decoder_hidden)  # (batch_size, max_seq_len, attention_dim)
         att = self.softmax(torch.matmul(att1, att2.transpose(1, 2)))/np.sqrt(self.encoder_dim)
         # (batch_size, num_pixels, max_seq_len)
+        
         return att
 
 # Transformer decoder layer
@@ -199,8 +200,8 @@ class Decoder(nn.Module):
 
 # Model image captioning with Attention
 class ImageCaptionModel(nn.Module):
-    def __init__(self, embedding_dim=512, attention_dim=256, vocab_size=0, max_seq_len=256, num_layers=8, num_heads=8, dropout=0.1):
-        super(ImageCaptioning, self).__init__()
+    def __init__(self, embedding_dim, attention_dim, vocab_size, max_seq_len, num_layers, num_heads, dropout=0.1):
+        super(ImageCaptionModel, self).__init__()
         self.position_embedding = PositionalEncoder(embedding_dim, max_seq_len, dropout)
         self.encoder = Encoder()
         self.decoder = Decoder(embedding_dim, attention_dim, vocab_size, max_seq_len, num_layers, num_heads, dropout)
@@ -241,9 +242,9 @@ def main():
     batch_size = 4
     max_seq_len = 128
     vocab_size = 123456
-    model = ImageCaptioning(embedding_dim=2048, attention_dim=256, vocab_size=vocab_size, num_layers=8, num_heads=8, dropout=0.1)
+    model = ImageCaptionModel(embedding_dim=512, attention_dim=256, vocab_size=vocab_size, max_seq_len=max_seq_len, num_layers=8, num_heads=8, dropout=0.1)
     out = model(torch.randn(batch_size, 3, 224, 224), torch.randint(0, vocab_size, (batch_size, max_seq_len)))
-
-    import ipdb; ipdb.set_trace()
+    print(out.size())
+    
 if __name__ == "__main__":
     main()
