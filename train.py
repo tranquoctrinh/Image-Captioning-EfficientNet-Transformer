@@ -234,9 +234,9 @@ def main():
         early_stopping=configs["early_stopping"]
     )
 
-    print(f"============ Training finished: {timedelta(seconds=time.time()-start_time)} ============")
-    print(f"---- Training | Best BLEU-4: {log["best_train_bleu4"]:.5f} | Best Loss: {log["best_train_loss"]:.5f}")
-    print(f"---- Validation | Best BLEU-4: {log["best_val_bleu4"]:.5f} | Best Loss: {log["best_val_loss"]:.5f}")
+    print(f"======================== Training finished: {timedelta(seconds=time.time()-start_time)} ========================")
+    print(f"---- Training | Best BLEU-4: {log['best_train_bleu4']:.5f} | Best Loss: {log['best_train_loss']:.5f}")
+    print(f"---- Validation | Best BLEU-4: {log['best_val_bleu4']:.5f} | Best Loss: {log['best_val_loss']:.5f}")
     print(f"---- Best epoch: {log['best_epoch']}")
 
     # Save log
