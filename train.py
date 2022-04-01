@@ -155,7 +155,16 @@ def train(model, train_loader, valid_loader, optim, criterion, n_epochs, tokeniz
         torch.cuda.empty_cache()
     
     return log
-        
+
+
+def visualize_loss(log):
+    plt.plot(log["train_loss"], label="train_loss")
+    plt.plot(log["val_loss"], label="val_loss")
+    plt.plot(log["train_loss_batch"], label="train_loss_batch")
+    plt.plot(log["val_loss_batch"], label="val_loss_batch")
+    plt.legend()
+    plt.savefig(configs["loss_path"])
+
 
 def main():
     # configs
@@ -244,14 +253,10 @@ def main():
     # Save log
     with open(configs["log_path"], "w") as f:
         json.dump(log, f)
+    
+    # Visualize loss
+    visualize_loss(log)
 
-def visualize_loss(log):
-    plt.plot(log["train_loss"], label="train_loss")
-    plt.plot(log["val_loss"], label="val_loss")
-    plt.plot(log["train_loss_batch"], label="train_loss_batch")
-    plt.plot(log["val_loss_batch"], label="val_loss_batch")
-    plt.legend()
-    plt.savefig(configs["loss_path"])
 
 if __name__ == "__main__":
     main()
