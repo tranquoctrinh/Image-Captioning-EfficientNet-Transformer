@@ -23,7 +23,7 @@ I use Encoder as Efficientnet to extract features from image and Decoder as Tran
 </figure>
 
 # 3. Dataset
-I'm using the MSCOCO '14 Dataset. You'd need to download the Training (13GB),  Validation (6GB) and [Test (6GB)] splits from [MSCOCO](http://cocodataset.org/#download) and place them in the `data/mscoco` directory.
+I'm using the MSCOCO '14 Dataset. You'd need to download the Training (13GB),  Validation (6GB) and Test (6GB) splits from [MSCOCO](http://cocodataset.org/#download) and place them in the `data/mscoco` directory.
 
 I'm also using Andrej Karpathy's split of the MSCOCO '14 dataset. It contains caption annotations for the MSCOCO, Flickr30k, and Flickr8k datasets. You can download it from [here](http://cs.stanford.edu/people/karpathy/deepimagesent/caption_datasets.zip).
 
