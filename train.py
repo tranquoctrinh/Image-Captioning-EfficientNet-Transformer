@@ -20,6 +20,7 @@ smoothie = SmoothingFunction()
 def train_epoch(model, train_loader, optim, criterion, epoch, device):
     model.train()
     total_loss, batch_bleu4 = [], []
+    hypotheses, references = [], []
     bar = tqdm(enumerate(train_loader), total=len(train_loader), desc=f"Training epoch {epoch+1}")
     for i, batch in bar:
         image, caption = batch["image"].to(device), batch["caption"].to(device)
@@ -50,22 +51,30 @@ def train_epoch(model, train_loader, optim, criterion, epoch, device):
             ref.append(ri)
 
         batch_bleu4.append(corpus_bleu(ref, hypo, smoothing_function=smoothie.method4))
+        hypotheses += hypo
+        references += ref
         bar.set_postfix(loss=total_loss[-1], bleu4=sum(batch_bleu4) / len(batch_bleu4))
-
-    return sum(total_loss) / len(total_loss), sum(batch_bleu4) / len(batch_bleu4)
+    
+    train_bleu4 = corpus_bleu(references, hypotheses, smoothing_function=smoothie.method4)
+    train_loss = sum(total_loss) / len(total_loss)
+    return train_loss, train_bleu4, total_loss
     
 
-def validate_epoch(model, valid_loader, tokenizer, epoch, device):
+def validate_epoch(model, valid_loader, tokenizer, criterion, epoch, device):
     model.eval()
-    hypotheses = []
-    references = []
-    batch_bleu4 = []
+    total_loss, batch_bleu4 = [], []
+    hypotheses, references = [], []
     bar = tqdm(enumerate(valid_loader), total=len(valid_loader), desc=f"Validating epoch {epoch+1}")
     for i, batch in bar:
         image, caption, all_caps = batch["image"].to(device), batch["caption"].to(device), batch["all_captions_seq"]
         target_input = caption[:, :-1]
         target_mask = model.make_mask(target_input)
         preds = model(image, target_input)
+
+        gold = caption[:, 1:].contiguous().view(-1)
+        loss = criterion(preds.view(-1, preds.size(-1)), gold)
+        total_loss.append(loss.item())
+
         preds = F.softmax(preds, dim=-1)
         preds = torch.argmax(preds, dim=-1)
         preds = preds.detach().cpu().numpy()
@@ -85,15 +94,20 @@ def validate_epoch(model, valid_loader, tokenizer, epoch, device):
         hypotheses += hypo
         references += ref
         bar.set_postfix(bleu4=sum(batch_bleu4) / len(batch_bleu4))
-    
-    return corpus_bleu(references, hypotheses, smoothing_function=smoothie.method4)
 
-def train(model, train_loader, valid_loader, optim, criterion, n_epochs, tokenizer, device, model_path):
+    val_loss = sum(total_loss) / len(total_loss)
+    val_bleu4 = corpus_bleu(references, hypotheses, smoothing_function=smoothie.method4)
+    return val_loss, val_bleu4, total_loss
+
+def train(model, train_loader, valid_loader, optim, criterion, n_epochs, tokenizer, device, model_path, early_stopping=5):
     model.train()
-    lst_train_loss, lst_bleu4 = [], []
-    best_bleu4, best_epoch = -np.Inf, 1
+    log = {"train_loss": [], "train_bleu4": [], "train_loss_batch": [], "val_loss": [], "val_bleu4": [], "val_loss_batch": []}
+    best_train_bleu4, best_val_bleu4, best_epoch = -np.Inf, -np.Inf, 1
+    count_early_stopping = 0
+    start_time = time.time()
+
     for epoch in range(n_epochs):
-        train_loss, train_bleu = train_epoch(
+        train_loss, train_bleu4, train_loss_batch = train_epoch(
             model=model,
             train_loader=train_loader,
             optim=optim,
@@ -101,26 +115,40 @@ def train(model, train_loader, valid_loader, optim, criterion, n_epochs, tokeniz
             epoch=epoch,
             device=device
         )
-        current_bleu4 = validate_epoch(
+        val_loss, val_bleu4, val_loss_batch = validate_epoch(
             model=model,
             valid_loader=valid_loader,
             tokenizer=tokenizer,
             epoch=epoch,
             device=device
         )
-        print(f"---- Epoch {epoch+1}/{n_epochs} | Train Loss: {train_loss:.5f} | Validation BLEU-4: {current_bleu4:.5f} | Best BLEU-4: {best_bleu4:.5f} | Best Epoch: {best_epoch}")
-        lst_train_loss.append(train_loss)
-        lst_bleu4.append(current_bleu4)
-        if current_bleu4 > best_bleu4:
-            best_bleu4 = current_bleu4
+        print(f"---- Epoch {epoch+1}/{n_epochs} | Train Loss: {train_loss:.5f} | Validation BLEU-4: {val_bleu4:.5f} | Best BLEU-4: {best_val_bleu4:.5f} | Best Epoch: {best_epoch} | Time taken: {timedelta(seconds=time.time()-start_time)}")
+        
+        best_val_bleu4 = train_bleu4 if train_bleu4 > best_val_bleu4 else best_val_bleu4
+        
+        # Logfile
+        log["train_loss"].append(train_loss)
+        log["train_bleu4"].append(train_bleu4)
+        log["train_loss_batch"].append(train_loss_batch)
+        log["val_loss"].append(val_loss)
+        log["val_bleu4"].append(val_bleu4)
+        log["val_loss_batch"].append(val_loss_batch)
+
+        # Detect improvement and save model or early stopping and break
+        if val_bleu4 > best_val_bleu4:
+            best_val_bleu4 = val_bleu4
             best_epoch = epoch + 1
             # Save Model with best validation bleu4
             torch.save(model.state_dict(), model_path)
             print("-------- Detect improment and save the best model --------")
-        
+        else:
+            count_early_stopping += 1
+            if count_early_stopping >= early_stopping:
+                print("-------- Early stopping --------")
+                break
         torch.cuda.empty_cache()
     
-    return lst_train_loss, lst_bleu4
+    return log
         
 
 def main():
@@ -188,7 +216,7 @@ def main():
     )
 
     # Train
-    train_loss, bleu4 = train(
+    log = train(
         model=model,
         train_loader=train_loader,
         valid_loader=valid_loader,
@@ -197,25 +225,11 @@ def main():
         n_epochs=configs["n_epochs"],
         tokenizer=tokenizer,
         device=device,
-        model_path=configs["model_path"]
+        model_path=configs["model_path"],
+        early_stopping=configs["early_stopping"]
     )
     print(f"---- Training Loss: {train_loss}")
-    print(f"---- Validation BLEU-4: {bleu4}")
-
-    log = {
-        "train_loss": train_loss,
-        "bleu4": bleu4
-    }
-    json.dump(log, open("./log_image_captioning_eff_transformer.json", "w"))
-    # visualize line plot train loss and validation bleu4
-    plt.plot(train_loss)
-    plt.title("Train Loss")
-    plt.savefig("./images/train_loss_image_captioning_eff_transformer.png")
-    plt.clf()
-    plt.plot(bleu4)
-    plt.title("Validation BLEU-4")
-    plt.savefig("./images/valid_bleu4_image_captioning_eff_transformer.png")
-    
+    print(f"---- Validation BLEU-4: {bleu4}")   
 
 if __name__ == "__main__":
     main()
