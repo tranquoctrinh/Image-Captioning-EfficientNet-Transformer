@@ -124,7 +124,7 @@ def train(model, train_loader, valid_loader, optim, criterion, n_epochs, tokeniz
             epoch=epoch,
             device=device
         )
-        print(f"---- Epoch {epoch+1}/{n_epochs} | Train Loss: {train_loss:.5f} | Validation BLEU-4: {val_bleu4:.5f} | Best BLEU-4: {best_val_bleu4:.5f} | Best Epoch: {best_epoch} | Time taken: {timedelta(seconds=time.time()-start_time)}")
+        print(f"---- Epoch {epoch+1}/{n_epochs} | Train Loss: {train_loss:.5f} | Validation BLEU-4: {val_bleu4:.5f} | Best BLEU-4: {best_val_bleu4:.5f} | Best Epoch: {best_epoch} | Time taken: {timedelta(seconds=int(time.time()-start_time))}")
         
         best_val_bleu4 = train_bleu4 if train_bleu4 > best_val_bleu4 else best_val_bleu4
         
@@ -235,9 +235,9 @@ def main():
         early_stopping=configs["early_stopping"]
     )
 
-    print(f"======================== Training finished: {timedelta(seconds=time.time()-start_time)} ========================")
-    print(f"---- Training | Best BLEU-4: {log['best_train_bleu4']:.5f} | Best Loss: {log['best_train_loss']:.5f}")
-    print(f"---- Validation | Best BLEU-4: {log['best_val_bleu4']:.5f} | Best Loss: {log['best_val_loss']:.5f}")
+    print(f"======================== Training finished: {timedelta(seconds=int(time.time()-start_time))} ========================")
+    print(f"---- Training | Best BLEU-4: {log['best_train_bleu4']:.5f} | Best Loss: {min(log['train_loss']):.5f}")
+    print(f"---- Validation | Best BLEU-4: {log['best_val_bleu4']:.5f} | Best Loss: {min(log['val_loss']):.5f}")
     print(f"---- Best epoch: {log['best_epoch']}")
 
     # Save log
