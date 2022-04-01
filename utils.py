@@ -1,4 +1,7 @@
 import torch
+import matplotlib.pyplot as plt
+import os
+
 
 configs = {
     "batch_size": 16,
@@ -17,5 +20,40 @@ configs = {
     "image_dir": "../coco/",
     "karpathy_json_path": "../coco/karpathy/dataset_coco.json",
     "log_path": "./images/log_training.json",
-    "loss_path": "./images/loss_bleu.png",
+    "log_visualize_dir": "./images/",
 }
+
+def visualize_log(log, configs):
+    # Plot loss per epoch
+    plt.figure()
+    plt.plot(log["train_loss"], label="train")
+    plt.plot(log["val_loss"], label="val")
+    plt.legend()
+    plt.title("Loss per epoch")
+    filename = os.path.join(configs["log_visualize_dir"], "loss_epoch.png")
+    plt.savefig(filename)
+
+    # Plot bleu4 per epoch
+    plt.figure()
+    plt.plot(log["train_bleu4"], label="train")
+    plt.plot(log["val_bleu4"], label="val")
+    plt.legend()
+    plt.title("BLEU-4 per epoch")
+    filename = os.path.join(configs['log_visualize_dir'], 'bleu4_epoch.png')
+    plt.savefig(filename)
+
+    # Plot loss per batch
+    plt.figure()
+    train_loss_batch = []
+    for loss in log["train_loss_batch"]:
+        train_loss_batch += loss
+    plt.plot(train_loss_batch, label="train")
+    
+    val_loss_batch = []
+    for loss in log["val_loss_batch"]:
+        val_loss_batch += loss
+    plt.plot(val_loss_batch, label="val")
+    plt.legend()
+    plt.title("Loss per batch")
+    filename = os.path.join(configs['log_visualize_dir'], 'loss_batch.png')
+    plt.savefig(filename)

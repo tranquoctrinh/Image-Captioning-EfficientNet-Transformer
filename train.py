@@ -17,6 +17,7 @@ from nltk.translate.bleu_score import SmoothingFunction
 smoothie = SmoothingFunction()
 
 
+
 def train_epoch(model, train_loader, tokenizer, criterion, optim, epoch, device):
     model.train()
     total_loss, batch_bleu4 = [], []
@@ -157,18 +158,9 @@ def train(model, train_loader, valid_loader, optim, criterion, n_epochs, tokeniz
     return log
 
 
-def visualize_loss(log):
-    plt.plot(log["train_loss"], label="train_loss")
-    plt.plot(log["val_loss"], label="val_loss")
-    plt.plot(log["train_loss_batch"], label="train_loss_batch")
-    plt.plot(log["val_loss_batch"], label="val_loss_batch")
-    plt.legend()
-    plt.savefig(configs["loss_path"])
-
-
 def main():
     # configs
-    from utils import configs
+    from utils import configs, visualize_log
     
     device = torch.device(configs["device"])
 
@@ -255,7 +247,7 @@ def main():
         json.dump(log, f)
     
     # Visualize loss
-    visualize_loss(log)
+    visualize_log(log, configs)
 
 
 if __name__ == "__main__":
