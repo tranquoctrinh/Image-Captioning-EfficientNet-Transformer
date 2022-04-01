@@ -74,7 +74,7 @@ def validate_epoch(model, valid_loader, tokenizer, epoch, device):
 def train(model, train_loader, valid_loader, optim, criterion, n_epochs, tokenizer, device, model_path):
     model.train()
     lst_train_loss, lst_bleu4 = [], []
-    best_bleu4 = -np.Inf
+    best_bleu4, best_epoch = -np.Inf, 1
     for epoch in range(n_epochs):
         train_loss = train_epoch(
             model=model,
@@ -91,11 +91,12 @@ def train(model, train_loader, valid_loader, optim, criterion, n_epochs, tokeniz
             epoch=epoch,
             device=device
         )
-        print(f"---- Epoch {epoch+1}/{n_epochs} | Train Loss: {train_loss:.5f} | Validation BLEU-4: {current_bleu4:.5f} | Best BLEU-4: {best_bleu4:.5f}")
+        print(f"---- Epoch {epoch+1}/{n_epochs} | Train Loss: {train_loss:.5f} | Validation BLEU-4: {current_bleu4:.5f} | Best BLEU-4: {best_bleu4:.5f} | Best Epoch: {best_epoch}")
         lst_train_loss.append(train_loss)
         lst_bleu4.append(current_bleu4)
         if current_bleu4 > best_bleu4:
             best_bleu4 = current_bleu4
+            best_epoch = epoch + 1
             # Save Model with best validation bleu4
             torch.save(model.state_dict(), model_path)
             print("-------- Detect improment and save the best model --------")
