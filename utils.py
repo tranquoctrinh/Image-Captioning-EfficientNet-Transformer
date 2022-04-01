@@ -13,6 +13,6 @@ configs = {
     "num_layers": 8,
     "num_heads": 8,
     "dropout": 0.1,
-    "image_dir:": "../coco/",
+    "image_dir": "../coco/",
     "karpathy_json_path": "../coco/karpathy/dataset_coco.json",
 }
