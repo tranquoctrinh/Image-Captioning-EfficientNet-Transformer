@@ -1,5 +1,6 @@
 <!-- # Image Captioning
 Image Captioning by deep learning model with Encoder as Efficientnet and Decoder as Decoder of Transformer -->
+# Table of Contents
 - [1. Objective](#1-objective)
 - [2. Model](#2-model)
 - [3. Dataset](#3-dataset)
