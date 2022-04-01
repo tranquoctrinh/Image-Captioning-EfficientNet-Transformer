@@ -23,7 +23,7 @@ def train_epoch(model, train_loader, tokenizer, optim, criterion, epoch, device)
     hypotheses, references = [], []
     bar = tqdm(enumerate(train_loader), total=len(train_loader), desc=f"Training epoch {epoch+1}")
     for i, batch in bar:
-        image, caption = batch["image"].to(device), batch["caption"].to(device)
+        image, caption, all_caps = batch["image"].to(device), batch["caption"].to(device), batch["all_captions_seq"]
         target_input = caption[:, :-1]
         target_mask = model.make_mask(target_input)
         preds = model(image, target_input)
@@ -134,6 +134,9 @@ def train(model, train_loader, valid_loader, optim, criterion, n_epochs, tokeniz
         log["val_loss"].append(val_loss)
         log["val_bleu4"].append(val_bleu4)
         log["val_loss_batch"].append(val_loss_batch)
+        log["best_train_bleu4"] = best_train_bleu4
+        log["best_val_bleu4"] = best_val_bleu4
+        log["best_epoch"] = best_epoch
 
         # Detect improvement and save model or early stopping and break
         if val_bleu4 > best_val_bleu4:
@@ -216,6 +219,7 @@ def main():
         shuffle=False
     )
 
+    start_time = time.time()
     # Train
     log = train(
         model=model,
@@ -229,8 +233,15 @@ def main():
         model_path=configs["model_path"],
         early_stopping=configs["early_stopping"]
     )
-    print(f"---- Training Loss: {train_loss}")
-    print(f"---- Validation BLEU-4: {bleu4}")   
+
+    print(f"============ Training finished: {timedelta(seconds=time.time()-start_time)} ============")
+    print(f"---- Training | Best BLEU-4: {log["best_train_bleu4"]:.5f} | Best Loss: {log["best_train_loss"]:.5f}")
+    print(f"---- Validation | Best BLEU-4: {log["best_val_bleu4"]:.5f} | Best Loss: {log["best_val_loss"]:.5f}")
+    print(f"---- Best epoch: {log['best_epoch']}")
+
+    # Save log
+    with open(configs["log_path"], "w") as f:
+        json.dump(log, f)
 
 if __name__ == "__main__":
     main()
