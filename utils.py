@@ -1,7 +1,7 @@
 import torch
 
 configs = {
-    "batch_size": 4,
+    "batch_size": 16,
     "lr": 1e-4,
     "n_epochs": 50,
     "max_seq_len": 128,

@@ -34,7 +34,7 @@ class ImageCaptionDataset(Dataset):
                     df.append({"image_path": image_path, "caption": caption, "all_captions": captions+[""]*(10-len(captions))})
                 elif self.phase == "test" and image["split"] in {"test"}:
                     df.append({"image_path": image_path, "caption": caption, "all_captions": captions+[""]*(10-len(captions))})
-        return pd.DataFrame(df).sample(frac=0.0001).reset_index(drop=True)
+        return pd.DataFrame(df)#.sample(frac=0.0001).reset_index(drop=True)
 
     def __len__(self):
         return len(self.df)
