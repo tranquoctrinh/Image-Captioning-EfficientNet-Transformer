@@ -126,7 +126,7 @@ def train(model, train_loader, valid_loader, optim, criterion, n_epochs, tokeniz
         )
         print(f"---- Epoch {epoch+1}/{n_epochs} | Train Loss: {train_loss:.5f} | Validation BLEU-4: {val_bleu4:.5f} | Best BLEU-4: {best_val_bleu4:.5f} | Best Epoch: {best_epoch} | Time taken: {timedelta(seconds=int(time.time()-start_time))}")
         
-        best_val_bleu4 = train_bleu4 if train_bleu4 > best_val_bleu4 else best_val_bleu4
+        best_train_bleu4 = train_bleu4 if train_bleu4 > best_train_bleu4 else best_train_bleu4
         
         # Logfile
         log["train_loss"].append(train_loss)
