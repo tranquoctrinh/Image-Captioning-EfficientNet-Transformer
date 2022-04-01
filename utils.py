@@ -4,7 +4,7 @@ import os
 
 
 configs = {
-    "batch_size": 16,
+    "batch_size": 32,
     "lr": 1e-4,
     "n_epochs": 50,
     "max_seq_len": 128,
