@@ -120,6 +120,7 @@ def train(model, train_loader, valid_loader, optim, criterion, n_epochs, tokeniz
             model=model,
             valid_loader=valid_loader,
             tokenizer=tokenizer,
+            criterion=criterion,
             epoch=epoch,
             device=device
         )
