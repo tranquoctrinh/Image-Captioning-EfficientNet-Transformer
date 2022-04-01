@@ -146,6 +146,7 @@ def train(model, train_loader, valid_loader, optim, criterion, n_epochs, tokeniz
             # Save Model with best validation bleu4
             torch.save(model.state_dict(), model_path)
             print("-------- Detect improment and save the best model --------")
+            count_early_stopping = 0
         else:
             count_early_stopping += 1
             if count_early_stopping >= early_stopping:
@@ -243,6 +244,14 @@ def main():
     # Save log
     with open(configs["log_path"], "w") as f:
         json.dump(log, f)
+
+def visualize_loss(log):
+    plt.plot(log["train_loss"], label="train_loss")
+    plt.plot(log["val_loss"], label="val_loss")
+    plt.plot(log["train_loss_batch"], label="train_loss_batch")
+    plt.plot(log["val_loss_batch"], label="val_loss_batch")
+    plt.legend()
+    plt.savefig(configs["loss_path"])
 
 if __name__ == "__main__":
     main()

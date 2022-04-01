@@ -127,3 +127,5 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+./model_image_captioning_eff_transfomer.pt

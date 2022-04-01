@@ -16,5 +16,6 @@ configs = {
     "early_stopping": 5,
     "image_dir": "../coco/",
     "karpathy_json_path": "../coco/karpathy/dataset_coco.json",
-    "log_path": "./log_training.json",
+    "log_path": "./images/log_training.json",
+    "loss_path": "./images/loss_bleu.png",
 }
