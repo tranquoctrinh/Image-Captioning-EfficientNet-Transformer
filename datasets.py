@@ -40,11 +40,8 @@ class ImageCaptionDataset(Dataset):
         return len(self.df)
     
     def __getitem__(self, index):
-        # image_path = self.df.iloc[index]["image_path"]
-        # image = Image.open(image_path).convert("RGB")
-        # random a image by numpy
-        image = np.random.rand(224, 224, 3)
-        image = Image.fromarray(image.astype('uint8')).convert('RGB')
+        image_path = self.df.iloc[index]["image_path"]
+        image = Image.open(image_path).convert("RGB")
         if self.transform is not None:
             image = self.transform(image)
 
