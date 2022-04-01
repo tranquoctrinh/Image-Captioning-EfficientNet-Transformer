@@ -141,7 +141,7 @@ def main():
     # Dataset
     train_dataset = ImageCaptionDataset(
         karpathy_json_path=configs["karpathy_json_path"],
-        image_dir=configs["image_dir"],
+        image_dir=configs["image_dir_train"],
         tokenizer=tokenizer,
         max_seq_len=configs["max_seq_len"],
         transform=transform, 
@@ -149,7 +149,7 @@ def main():
     )
     valid_dataset = ImageCaptionDataset(
         karpathy_json_path=configs["karpathy_json_path"],
-        image_dir=configs["image_dir"],
+        image_dir=configs["image_dir_val"],
         tokenizer=tokenizer,
         max_seq_len=configs["max_seq_len"],
         transform=transform, 

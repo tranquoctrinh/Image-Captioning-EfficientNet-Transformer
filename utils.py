@@ -11,6 +11,8 @@ configs = {
     "num_layers": 8,
     "num_heads": 8,
     "dropout": 0.1,
-    "image_dir": "../coco/images/",
-    "karpathy_json_path": "../coco/dataset_coco.json",
+    "image_dir_train": "../coco/train2014/",
+    "image_dir_val": "../coco/val2014/",
+    "image_dir_test": "../coco/test2014/",
+    "karpathy_json_path": "../coco/karpathy/dataset_coco.json",
 }
