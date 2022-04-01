@@ -1,9 +1,9 @@
 import torch
 
 configs = {
-    "batch_size": 2,
+    "batch_size": 4,
     "lr": 1e-4,
-    "n_epochs": 10,
+    "n_epochs": 50,
     "max_seq_len": 128,
     "tokenizer": "bert-base-cased",
     "model_path": "./model_image_captioning_eff_transfomer.pt",
@@ -13,8 +13,6 @@ configs = {
     "num_layers": 8,
     "num_heads": 8,
     "dropout": 0.1,
-    "image_dir_train": "../coco/train2014/",
-    "image_dir_val": "../coco/val2014/",
-    "image_dir_test": "../coco/test2014/",
+    "image_dir:": "../coco/",
     "karpathy_json_path": "../coco/karpathy/dataset_coco.json",
 }
