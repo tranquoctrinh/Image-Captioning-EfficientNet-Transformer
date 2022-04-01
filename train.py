@@ -129,6 +129,7 @@ def main():
         num_heads=configs["num_heads"],
         dropout=configs["dropout"],
     )
+    print("Model to{}".format(device))
     model.to(configs["device"])
 
     for p in model.parameters():
