@@ -1,3 +1,5 @@
+import torch
+
 configs = {
     "batch_size": 2,
     "lr": 1e-4,
