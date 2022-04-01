@@ -17,7 +17,7 @@ from nltk.translate.bleu_score import SmoothingFunction
 smoothie = SmoothingFunction()
 
 
-def train_epoch(model, train_loader, tokenizer, optim, criterion, epoch, device):
+def train_epoch(model, train_loader, tokenizer, criterion, optim, epoch, device):
     model.train()
     total_loss, batch_bleu4 = [], []
     hypotheses, references = [], []
