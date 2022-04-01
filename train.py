@@ -129,8 +129,8 @@ def main():
         num_heads=configs["num_heads"],
         dropout=configs["dropout"],
     )
-    print("Model to{}".format(device))
-    model.to(configs["device"])
+    print("Model to {}".format(device))
+    model.to(device)
 
     for p in model.parameters():
         if p.dim() > 1:
