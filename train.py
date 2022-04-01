@@ -186,10 +186,6 @@ def main():
     print("Model to {}".format(device))
     model.to(device)
 
-    for p in model.parameters():
-        if p.dim() > 1:
-            nn.init.xavier_uniform_(p)
-
     criterion = nn.CrossEntropyLoss(ignore_index=tokenizer.pad_token_id)
     optim = torch.optim.Adam(model.parameters(), lr=configs["lr"], betas=(0.9, 0.98), eps=1e-9)
 
