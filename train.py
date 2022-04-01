@@ -13,11 +13,13 @@ from torchvision import transforms
 import json
 from datasets import ImageCaptionDataset
 from models import ImageCaptionModel
+from nltk.translate.bleu_score import SmoothingFunction
+smoothie = SmoothingFunction()
 
 
 def train_epoch(model, train_loader, optim, criterion, epoch, device):
     model.train()
-    total_loss = []
+    total_loss, batch_bleu4 = [], []
     bar = tqdm(enumerate(train_loader), total=len(train_loader), desc=f"Training epoch {epoch+1}")
     for i, batch in bar:
         image, caption = batch["image"].to(device), batch["caption"].to(device)
@@ -30,9 +32,27 @@ def train_epoch(model, train_loader, optim, criterion, epoch, device):
         loss.backward()
         optim.step()
         total_loss.append(loss.item())
-        bar.set_postfix(loss=total_loss[-1])
     
-    return sum(total_loss) / len(total_loss)
+        # Calculate BLEU-4 score
+        preds = F.softmax(preds, dim=-1)
+        preds = torch.argmax(preds, dim=-1)
+        preds = preds.detach().cpu().numpy()
+        caps = [tokenizer.decode(cap, skip_special_tokens=True) for cap in preds]
+        hypo = [cap.split() for cap in caps]
+        
+        batch_size = len(hypo)
+        ref = []
+        for i in range(batch_size):
+            ri = []
+            for j in range(len(all_caps)):
+                if all_caps[j][i]:
+                    ri.append(all_caps[j][i].split())
+            ref.append(ri)
+
+        batch_bleu4.append(corpus_bleu(ref, hypo, smoothing_function=smoothie.method4))
+        bar.set_postfix(loss=total_loss[-1], bleu4=sum(batch_bleu4) / len(batch_bleu4))
+
+    return sum(total_loss) / len(total_loss), sum(batch_bleu4) / len(batch_bleu4)
     
 
 def validate_epoch(model, valid_loader, tokenizer, epoch, device):
@@ -61,9 +81,6 @@ def validate_epoch(model, valid_loader, tokenizer, epoch, device):
                     ri.append(all_caps[j][i].split())
             ref.append(ri)
         
-        from nltk.translate.bleu_score import SmoothingFunction
-        smoothie = SmoothingFunction()
-
         batch_bleu4.append(corpus_bleu(ref, hypo, smoothing_function=smoothie.method4))
         hypotheses += hypo
         references += ref
@@ -76,7 +93,7 @@ def train(model, train_loader, valid_loader, optim, criterion, n_epochs, tokeniz
     lst_train_loss, lst_bleu4 = [], []
     best_bleu4, best_epoch = -np.Inf, 1
     for epoch in range(n_epochs):
-        train_loss = train_epoch(
+        train_loss, train_bleu = train_epoch(
             model=model,
             train_loader=train_loader,
             optim=optim,
