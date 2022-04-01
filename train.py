@@ -101,7 +101,7 @@ def validate_epoch(model, valid_loader, tokenizer, criterion, epoch, device):
     val_bleu4 = corpus_bleu(references, hypotheses, smoothing_function=smoothie.method4)
     return val_loss, val_bleu4, total_loss
 
-def train(model, train_loader, valid_loader, optim, criterion, n_epochs, tokenizer, device, model_path, early_stopping=5):
+def train(model, train_loader, valid_loader, optim, criterion, n_epochs, tokenizer, device, model_path, log_path, early_stopping=5):
     model.train()
     log = {"train_loss": [], "train_bleu4": [], "train_loss_batch": [], "val_loss": [], "val_bleu4": [], "val_loss_batch": []}
     best_train_bleu4, best_val_bleu4, best_epoch = -np.Inf, -np.Inf, 1
@@ -140,6 +140,9 @@ def train(model, train_loader, valid_loader, optim, criterion, n_epochs, tokeniz
         log["best_train_bleu4"] = best_train_bleu4
         log["best_val_bleu4"] = best_val_bleu4
         log["best_epoch"] = best_epoch
+        # Save log
+        with open(log_path, "w") as f:
+            json.dump(log, f)
 
         # Detect improvement and save model or early stopping and break
         if val_bleu4 > best_val_bleu4:
@@ -232,6 +235,7 @@ def main():
         tokenizer=tokenizer,
         device=device,
         model_path=configs["model_path"],
+        log_path=configs["log_path"],
         early_stopping=configs["early_stopping"]
     )
 
