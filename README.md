@@ -1,6 +1,7 @@
 <!-- # Image Captioning
 Image Captioning by deep learning model with Encoder as Efficientnet and Decoder as Decoder of Transformer -->
 # Table of Contents
+- [Table of Contents](#table-of-contents)
 - [1. Objective](#1-objective)
 - [2. Model](#2-model)
 - [3. Dataset](#3-dataset)
@@ -63,7 +64,7 @@ token = tokenizer(caption, max_length=max_seq_len, padding="max_length", truncat
 For more details, see `datasets.py`.
 
 ### 4.1.3. Hyperparameters
-- Epochs: 10
+- Epochs: 50
 - Batch size: 32
 - Max sequence length: 128
 - Learning rate: 1e-4
@@ -73,7 +74,7 @@ For more details, see `datasets.py`.
 - Adam eps: 1e-09
 - Loss: Cross-entropy
 - Metric: BLEU-4
-- Early stopping: 10
+- Early stopping: 5
 
 All the hyperparameters are defined in `utils.py`. So, you can change the hyperparameters by yourself easily.
 
