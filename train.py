@@ -11,11 +11,12 @@ from nltk.translate.bleu_score import sentence_bleu
 import os
 from torchvision import transforms
 import json
-from datasets import ImageCaptionDataset
-from models import ImageCaptionModel
 from nltk.translate.bleu_score import SmoothingFunction
 smoothie = SmoothingFunction()
 
+from utils import configs, visualize_log
+from datasets import ImageCaptionDataset
+from models import ImageCaptionModel
 
 
 def train_epoch(model, train_loader, tokenizer, criterion, optim, epoch, device):
@@ -158,10 +159,7 @@ def train(model, train_loader, valid_loader, optim, criterion, n_epochs, tokeniz
     return log
 
 
-def main():
-    # configs
-    from utils import configs, visualize_log
-    
+def main():    
     device = torch.device(configs["device"])
 
     tokenizer = AutoTokenizer.from_pretrained(configs["tokenizer"])

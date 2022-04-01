@@ -6,6 +6,8 @@ import PIL
 from transformers import BertTokenizer
 from tqdm import tqdm
 import time
+
+from utils import configs
 from models import ImageCaptionModel
 from datasets import ImageCaptionDataset
 
@@ -104,7 +106,6 @@ def load_model_tokenizer(configs):
     return model, tokenizer, device
 
 def main():
-    from utils import configs
     # Generate caption
     model, tokenizer, device = load_model_tokenizer(configs)
     st = time.time()
