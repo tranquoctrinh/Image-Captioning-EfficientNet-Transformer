@@ -191,11 +191,11 @@ def main():
     # visualize line plot train loss and validation bleu4
     plt.plot(train_loss)
     plt.title("Train Loss")
-    plt.savefig("./train_loss_image_captioning_eff_transformer.png")
+    plt.savefig("./images/train_loss_image_captioning_eff_transformer.png")
     plt.clf()
     plt.plot(bleu4)
     plt.title("Validation BLEU-4")
-    plt.savefig("./valid_bleu4_image_captioning_eff_transformer.png")
+    plt.savefig("./images/valid_bleu4_image_captioning_eff_transformer.png")
     
 
 if __name__ == "__main__":
