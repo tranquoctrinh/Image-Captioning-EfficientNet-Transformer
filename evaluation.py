@@ -8,7 +8,7 @@ from tqdm import tqdm
 import time
 import os
 import json
-from utils import configs, transform, metric_scores
+from utils import configs, transform, metric_scores, convert_karpathy_to_coco_format
 from models import ImageCaptionModel
 from datasets import ImageCaptionDataset
 
@@ -113,8 +113,9 @@ def load_model_tokenizer(configs):
 
 # Evaluate model on test dataset
 def evaluate():
-    if not os.path.exists("results/"):
-        os.mkdir("results/")
+    output_dir = "./results"
+    if not os.path.exists(output_dir):
+        os.mkdir(output_dir)
 
     # Load model and tokenizer
     model, tokenizer, device = load_model_tokenizer(configs)
@@ -129,22 +130,29 @@ def evaluate():
     )
     # Evaluate model
     model.eval()
-    
+
+    # convert karpathy json to coco format for evaluation
+    ann = convert_karpathy_to_coco_format(karpathy_path=configs["karpathy_json_path"], coco_path=configs["val_annotation_path"])
+    ann_path = os.path.join(output_dir, f"coco_annotation_test.json")
+    json.dump(ann, open(ann_path, "w"))
+
+        
     beam_size = [3, 4, 5]
     scores = {}
     for b in beam_size:
         result = []
         for i in tqdm(range(len(test_dataset))):
-            image, all_caps = test_dataset[i]["image"], test_dataset[i]["all_captions_seq"]
-            # Preprocess image
-            image = preprocess_image(image, transform)
+            image, all_caps, image_id = test_dataset[i]["image"], test_dataset[i]["all_captions_seq"], test_dataset[i]["image_id"]
+            image = image.unsqueeze(0)
+
             # Generate caption
             cap = generate_caption(model, image, tokenizer, beam_size=b, device=device)
-            result.append({"image_id": test_dataset[i]["image_id"], "caption": cap})
+            result.append({"image_id": image_id, "caption": cap})
         # Save result
-        result_path = f"results/results_beam{b}.json"
+        result_path = os.path.join(output_dir, f"prediction_beam_size_{b}.json")
         json.dump(result, open(result_path, "w"))
         # Calculate metrics
+
         score = metric_scores(result_path, ann_path)
         scores["beam{}".format(b)] = score
     
@@ -173,4 +181,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    evaluate()

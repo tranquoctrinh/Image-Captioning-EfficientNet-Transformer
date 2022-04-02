@@ -20,6 +20,8 @@ configs = {
     "early_stopping": 5,
     "image_dir": "../coco/",
     "karpathy_json_path": "../coco/karpathy/dataset_coco.json",
+    "val_annotation_path": "../coco/annotations/captions_val2014.json",
+    "train_annotation_path": "../coco/annotations/captions_train2014.json",
     "log_path": "./images/log_training.json",
     "log_visualize_dir": "./images/",
 }
@@ -73,7 +75,7 @@ from pycocoevalcap.eval import COCOEvalCap
 def metric_scores(annotation_path, prediction_path):
     # annotation_file = 'captions_val2014.json'
     # results_file = 'captions_val2014_fakecap_results.json'
-    # format result file
+    # format results_file
     # {'image_id': 1, 'caption': 'a caption'}
 
     results = {}
@@ -99,3 +101,15 @@ def metric_scores(annotation_path, prediction_path):
         dct[metric] = score
     
     return dct
+
+
+def convert_karpathy_to_coco_format(karpathy_path, coco_path, phase="test"):
+    # phase in {"train", "val", "test"}
+    phase = {"train", "restval"} if phase == "train" else {phase}
+    coco = json.load(open(coco_path))
+    karpathy = json.load(open(karpathy_path))
+
+    karpathy_ids = set([x['cocoid'] for x in karpathy["images"] if x['split'] in phase])
+    coco["images"] = [x for x in coco["images"] if x["id"] in karpathy_ids]
+    coco["annotations"] = [x for x in coco["annotations"] if x["image_id"] in karpathy_ids]
+    return coco
