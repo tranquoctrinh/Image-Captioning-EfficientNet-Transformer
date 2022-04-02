@@ -77,7 +77,6 @@ For more details, see `datasets.py`.
 - Max sequence length: 128
 - Learning rate: 1e-4
 - Optimizer: Adam
-- Adam weight decay: 0.01
 - Adam beta: (0.9, 0.98)
 - Adam eps: 1e-09
 - Loss: Cross-entropy
@@ -92,7 +91,14 @@ I evaluate the model on the validation set after each epoch. For each image, I g
 You can see the detaile in the `train.py` file.
 
 # 5. Evaluation
-To evaluate the model, I used the [pycocoevalcap package](https://github.com/salaniz/pycocoevalcap).
+To evaluate the model, I used the [pycocoevalcap package](https://github.com/salaniz/pycocoevalcap). Install it by `pip install pycocoevalcap`. And this package need to be Java 1.8.0 installed.
+```bash
+sudo apt-get update
+sudo apt-get install openjdk-8-jdk
+java -version
+
+pip install pycocoevalcap
+```
 
 I use beam search to generate captions with beam size of 3, 4, 5. I use the BLEU-4, METEOR, ROUGE-L, CIDEr, and SPICE score to evaluate the model. The results on the test set (5000 images) are shown below.
 

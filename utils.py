@@ -12,7 +12,7 @@ configs = {
     "max_seq_len": 128,
     "tokenizer": "bert-base-cased",
     "model_path": "./model_image_captioning_eff_transfomer.pt",
-    "device": "cuda:2" if torch.cuda.is_available() else "cpu",
+    "device": "cuda:0" if torch.cuda.is_available() else "cpu",
     "embedding_dim": 512,
     "attention_dim": 256,
     "num_layers": 8,

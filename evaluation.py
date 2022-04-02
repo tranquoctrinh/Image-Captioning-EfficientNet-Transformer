@@ -140,20 +140,20 @@ def evaluate():
     beam_size = [3, 4, 5]
     scores = {}
     for b in beam_size:
-        result = []
+        prediction = []
         for i in tqdm(range(len(test_dataset))):
             image, all_caps, image_id = test_dataset[i]["image"], test_dataset[i]["all_captions_seq"], test_dataset[i]["image_id"]
             image = image.unsqueeze(0)
 
             # Generate caption
             cap = generate_caption(model=model, image=image, tokenizer=tokenizer, beam_size=b, device=device, print_process=False)
-            result.append({"image_id": image_id, "caption": cap})
-        # Save result
-        result_path = os.path.join(output_dir, f"prediction_beam_size_{b}.json")
-        json.dump(result, open(result_path, "w"))
+            prediction.append({"image_id": image_id, "caption": cap})
+        # Save prediction
+        predict_path = os.path.join(output_dir, f"prediction_beam_size_{b}.json")
+        json.dump(prediction, open(predict_path, "w"))
         # Calculate metrics
 
-        score = metric_scores(result_path, ann_path)
+        score = metric_scores(annotation_path=ann_path, prediction_path=predict_path)
         scores["beam{}".format(b)] = score
     
     # Save scores
