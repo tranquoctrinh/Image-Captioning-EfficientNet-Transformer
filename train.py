@@ -46,16 +46,13 @@ def train_epoch(model, train_loader, tokenizer, criterion, optim, epoch, device)
         batch_size = len(hypo)
         ref = []
         for i in range(batch_size):
-            ri = []
-            for j in range(len(all_caps)):
-                if all_caps[j][i]:
-                    ri.append(all_caps[j][i].split())
+            ri = [all_caps[j][i].split() for j in range(len(all_caps)) if all_caps[j][i]]
             ref.append(ri)
-
         batch_bleu4.append(corpus_bleu(ref, hypo, smoothing_function=smoothie.method4))
         hypotheses += hypo
         references += ref
-        bar.set_postfix(loss=total_loss[-1], bleu4=sum(batch_bleu4) / len(batch_bleu4))
+
+        bar.set_postfix(loss=total_loss[-1], bleu4=batch_bleu4[-1])
     
     train_bleu4 = corpus_bleu(references, hypotheses, smoothing_function=smoothie.method4)
     train_loss = sum(total_loss) / len(total_loss)
@@ -86,16 +83,13 @@ def validate_epoch(model, valid_loader, tokenizer, criterion, epoch, device):
         batch_size = len(hypo)
         ref = []
         for i in range(batch_size):
-            ri = []
-            for j in range(len(all_caps)):
-                if all_caps[j][i]:
-                    ri.append(all_caps[j][i].split())
+            ri = [all_caps[j][i].split() for j in range(len(all_caps)) if all_caps[j][i]]
             ref.append(ri)
-        
         batch_bleu4.append(corpus_bleu(ref, hypo, smoothing_function=smoothie.method4))
         hypotheses += hypo
         references += ref
-        bar.set_postfix(bleu4=sum(batch_bleu4) / len(batch_bleu4))
+        
+        bar.set_postfix(loss=total_loss[-1], bleu4=batch_bleu4[-1])
 
     val_loss = sum(total_loss) / len(total_loss)
     val_bleu4 = corpus_bleu(references, hypotheses, smoothing_function=smoothie.method4)
