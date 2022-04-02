@@ -96,10 +96,10 @@ To evaluate the model, I used the [pycocoevalcap package](https://github.com/sal
 
 I use beam search to generate captions with beam size of 3, 4, 5. I use the BLEU-4, METEOR, ROUGE-L, CIDEr, and SPICE score to evaluate the model. The results on the test set (5000 images) are shown below.
 
-| Metrics/ Beam Size| BLEU-4 | METEOR | ROUGE-L | CIDEr | SPICE |
+| Metrics | BLEU-4 | METEOR | ROUGE-L | CIDEr | SPICE |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| 3 | 0.8 | 0.8 | 0.8 | 0.8 | 0.8 |
-| 4 | 0.8 | 0.8 | 0.8 | 0.8 | 0.8 |
-| 5 | 0.8 | 0.8 | 0.8 | 0.8 | 0.8 |
+| Beam Size 3 | 0.8 | 0.8 | 0.8 | 0.8 | 0.8 |
+| Beam Size 4 | 0.8 | 0.8 | 0.8 | 0.8 | 0.8 |
+| Beam Size 5 | 0.8 | 0.8 | 0.8 | 0.8 | 0.8 |
 
 # 6. Conclusion
