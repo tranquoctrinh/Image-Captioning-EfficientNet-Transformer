@@ -156,6 +156,9 @@ def evaluate():
         score = metric_scores(annotation_path=ann_path, prediction_path=predict_path)
         scores["beam{}".format(b)] = score
     
+    # print scores
+    for k, v in scores.items():
+        print(f"{k}: {v}")
     # Save scores
     json.dump(scores, open(f"results/scores.json", "w"))
 

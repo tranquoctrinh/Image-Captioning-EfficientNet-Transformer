@@ -50,7 +50,7 @@ def visualize_log(log, configs):
     plt.plot(log["val_bleu4"], label="val")
     plt.legend()
     plt.title("BLEU-4 per epoch")
-    filename = os.path.join(configs['log_visualize_dir'], 'bleu4_epoch.png')
+    filename = os.path.join(configs["log_visualize_dir"], "bleu4_epoch.png")
     plt.savefig(filename)
 
     # Plot loss per batch
@@ -66,7 +66,7 @@ def visualize_log(log, configs):
     plt.plot(val_loss_batch, label="val")
     plt.legend()
     plt.title("Loss per batch")
-    filename = os.path.join(configs['log_visualize_dir'], 'loss_batch.png')
+    filename = os.path.join(configs["log_visualize_dir"], "loss_batch.png")
     plt.savefig(filename)
 
 
@@ -74,34 +74,22 @@ from pycocotools.coco import COCO
 from pycocoevalcap.eval import COCOEvalCap
 
 def metric_scores(annotation_path, prediction_path):
-    # annotation_file = 'captions_val2014.json'
-    # results_file = 'captions_val2014_fakecap_results.json'
+    # annotation_file = "captions_val2014.json"
+    # results_file = "captions_val2014_fakecap_results.json"
     # format results_file
-    # {'image_id': 1, 'caption': 'a caption'}
+    # {"image_id": 1, "caption": "a caption"}
 
     results = {}
-    # create coco object and coco_result object
     coco = COCO(annotation_path)
     coco_result = coco.loadRes(prediction_path)
-
-    # create coco_eval object by taking coco and coco_result
     coco_eval = COCOEvalCap(coco, coco_result)
-
-    # evaluate on a subset of images by setting
-    # coco_eval.params['image_id'] = coco_result.getImgIds()
-    # please remove this line when evaluating the full validation set
-    coco_eval.params['image_id'] = coco_result.getImgIds()
-
-    # evaluate results
-    # SPICE will take a few minutes the first time, but speeds up due to caching
+    coco_eval.params["image_id"] = coco_result.getImgIds()
     coco_eval.evaluate()
-
-    # print output evaluation scores
     for metric, score in coco_eval.eval.items():
-        # print(f'{metric}: {score:.3f}')
-        dct[metric] = score
-    
-    return dct
+        print(f"{metric}: {score:.3f}")
+        results[metric] = round(score, 5)
+
+    return results
 
 
 def convert_karpathy_to_coco_format(karpathy_path, coco_path, phase="test"):
@@ -110,7 +98,7 @@ def convert_karpathy_to_coco_format(karpathy_path, coco_path, phase="test"):
     coco = json.load(open(coco_path))
     karpathy = json.load(open(karpathy_path))
 
-    karpathy_ids = set([x['cocoid'] for x in karpathy["images"] if x['split'] in phase])
+    karpathy_ids = set([x["cocoid"] for x in karpathy["images"] if x["split"] in phase])
     coco["images"] = [x for x in coco["images"] if x["id"] in karpathy_ids]
     coco["annotations"] = [x for x in coco["annotations"] if x["image_id"] in karpathy_ids]
     return coco
