@@ -9,12 +9,11 @@ from datetime import datetime, timedelta
 from nltk.translate.bleu_score import corpus_bleu
 from nltk.translate.bleu_score import sentence_bleu
 import os
-from torchvision import transforms
 import json
 from nltk.translate.bleu_score import SmoothingFunction
 smoothie = SmoothingFunction()
 
-from utils import configs, visualize_log
+from utils import configs, visualize_log, transform
 from datasets import ImageCaptionDataset
 from models import ImageCaptionModel
 
@@ -88,7 +87,7 @@ def validate_epoch(model, valid_loader, tokenizer, criterion, epoch, device):
         batch_bleu4.append(corpus_bleu(ref, hypo, smoothing_function=smoothie.method4))
         hypotheses += hypo
         references += ref
-        
+
         bar.set_postfix(loss=total_loss[-1], bleu4=batch_bleu4[-1])
 
     val_loss = sum(total_loss) / len(total_loss)
@@ -120,7 +119,6 @@ def train(model, train_loader, valid_loader, optim, criterion, n_epochs, tokeniz
             epoch=epoch,
             device=device
         )
-        print(f"---- Epoch {epoch+1}/{n_epochs} | Train Loss: {train_loss:.5f} | Validation BLEU-4: {val_bleu4:.5f} | Best BLEU-4: {best_val_bleu4:.5f} | Best Epoch: {best_epoch} | Time taken: {timedelta(seconds=int(time.time()-start_time))}")
         
         best_train_bleu4 = train_bleu4 if train_bleu4 > best_train_bleu4 else best_train_bleu4
         
@@ -151,7 +149,10 @@ def train(model, train_loader, valid_loader, optim, criterion, n_epochs, tokeniz
             if count_early_stopping >= early_stopping:
                 print("-------- Early stopping --------")
                 break
+
         torch.cuda.empty_cache()
+        
+        print(f"---- Epoch {epoch+1}/{n_epochs} | Train Loss: {train_loss:.5f} | Valid Loss: {val_loss:.5f} | Validation BLEU-4: {val_bleu4:.5f} | Best BLEU-4: {best_val_bleu4:.5f} | Best Epoch: {best_epoch} | Time taken: {timedelta(seconds=int(time.time()-start_time))}")
     
     return log
 
@@ -160,13 +161,6 @@ def main():
     device = torch.device(configs["device"])
 
     tokenizer = AutoTokenizer.from_pretrained(configs["tokenizer"])
-
-    transform = transforms.Compose([
-        transforms.Resize(256),
-        transforms.CenterCrop(224),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    ])
 
     model = ImageCaptionModel(
         embedding_dim=configs["embedding_dim"],

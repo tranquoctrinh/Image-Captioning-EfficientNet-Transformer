@@ -28,12 +28,18 @@ class ImageCaptionDataset(Dataset):
             image_path = os.path.join(self.image_dir, image["filepath"], image["filename"])
             captions = [" ".join(c["tokens"]) for c in image["sentences"]]
             for caption in captions:
+                row = {
+                    "image_id": image["cocoid"],
+                    "image_path": image_path, 
+                    "caption": caption, 
+                    "all_captions": captions+[""]*(10-len(captions))
+                    }
                 if self.phase == "train" and image["split"] in {"train", "restval"}:
-                    df.append({"image_path": image_path, "caption": caption, "all_captions": captions+[""]*(10-len(captions))})
+                    df.append(row)
                 elif self.phase == "val" and image["split"] in {"val"}:
-                    df.append({"image_path": image_path, "caption": caption, "all_captions": captions+[""]*(10-len(captions))})
+                    df.append(row)
                 elif self.phase == "test" and image["split"] in {"test"}:
-                    df.append({"image_path": image_path, "caption": caption, "all_captions": captions+[""]*(10-len(captions))})
+                    df.append(row)
         return pd.DataFrame(df)#.sample(frac=0.0001).reset_index(drop=True)
 
     def __len__(self):
@@ -50,6 +56,8 @@ class ImageCaptionDataset(Dataset):
         all_captions = self.df.loc[index, "all_captions"]
         all_captions_tokens = self.tokenizer(all_captions, max_length=self.max_seq_len, padding="max_length", truncation=True, return_tensors="pt")["input_ids"]
         return {
+            "image_id": self.df.loc[index, "image_id"],
+            "image_path": image_path,
             "image": image,
             "caption_seq": caption,
             "caption": caption_tokens,

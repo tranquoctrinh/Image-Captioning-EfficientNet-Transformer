@@ -6,22 +6,26 @@ import PIL
 from transformers import BertTokenizer
 from tqdm import tqdm
 import time
-
-from utils import configs
+import os
+import json
+from utils import configs, transform, metric_scores
 from models import ImageCaptionModel
 from datasets import ImageCaptionDataset
 
 
-def caption(model, image_path, tokenizer, transform, max_seq_len=256, beam_size=3, device=torch.device("cpu"), print_process=False):
+def preprocess_image(image_path, transform):
+    """
+    This function will preprocess image
+    """
+    image = PIL.Image.open(image_path).convert("RGB")
+    image = transform(image)
+    image = image.unsqueeze(0)
+    return image
+
+def generate_caption(model, image, tokenizer, max_seq_len=256, beam_size=3, device=torch.device("cpu"), print_process=False):
     """
     This funciton will generate caption for an image
     """
-    model.eval()
-    # Load image
-    image = PIL.Image.open(image_path).convert("RGB")
-    # Preprocess image
-    image = transform(image)
-    image = image.unsqueeze(0) # batch_size = 1
     image = image.to(device)
     # Generate caption
     with torch.no_grad():
@@ -79,8 +83,9 @@ def caption(model, image_path, tokenizer, transform, max_seq_len=256, beam_size=
         # Get target sentence tokens
         target_tokens = completed[0][0]
         # Convert target sentence from tokens to string
-        target_sentence = tokenizer.decode(target_tokens, skip_special_tokens=True)
-        return target_sentence
+        caption = tokenizer.decode(target_tokens, skip_special_tokens=True)
+        return caption
+
 
 def load_model_tokenizer(configs):
     """
@@ -105,6 +110,48 @@ def load_model_tokenizer(configs):
     print(f"Done load model on the {device} device")
     return model, tokenizer, device
 
+
+# Evaluate model on test dataset
+def evaluate():
+    if not os.path.exists("results/"):
+        os.mkdir("results/")
+
+    # Load model and tokenizer
+    model, tokenizer, device = load_model_tokenizer(configs)
+    # Load test dataset
+    test_dataset = ImageCaptionDataset(
+        karpathy_json_path=configs["karpathy_json_path"],
+        image_dir=configs["image_dir"],
+        tokenizer=tokenizer,
+        max_seq_len=configs["max_seq_len"],
+        transform=transform, 
+        phase="test"
+    )
+    # Evaluate model
+    model.eval()
+    
+    beam_size = [3, 4, 5]
+    scores = {}
+    for b in beam_size:
+        result = []
+        for i in tqdm(range(len(test_dataset))):
+            image, all_caps = test_dataset[i]["image"], test_dataset[i]["all_captions_seq"]
+            # Preprocess image
+            image = preprocess_image(image, transform)
+            # Generate caption
+            cap = generate_caption(model, image, tokenizer, beam_size=b, device=device)
+            result.append({"image_id": test_dataset[i]["image_id"], "caption": cap})
+        # Save result
+        result_path = f"results/results_beam{b}.json"
+        json.dump(result, open(result_path, "w"))
+        # Calculate metrics
+        score = metric_scores(result_path, ann_path)
+        scores["beam{}".format(b)] = score
+    
+    # Save scores
+    json.dump(scores, open(f"results/scores.json", "w"))
+
+
 def main():
     # Generate caption
     model, tokenizer, device = load_model_tokenizer(configs)
@@ -114,7 +161,7 @@ def main():
         model=model,
         image_path="./data/images/test.jpg",
         tokenizer=tokenizer,
-        transform=configs["transform"],
+        transform=tranform,
         max_seq_len=configs["max_seq_len"],
         beam_size=configs["beam_size"],
         device=device,

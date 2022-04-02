@@ -1,6 +1,7 @@
 import torch
 import matplotlib.pyplot as plt
 import os
+from torchvision import transforms
 
 
 configs = {
@@ -22,6 +23,13 @@ configs = {
     "log_path": "./images/log_training.json",
     "log_visualize_dir": "./images/",
 }
+
+transform = transforms.Compose([
+    transforms.Resize(256),
+    transforms.CenterCrop(224),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+])
 
 def visualize_log(log, configs):
     # Plot loss per epoch
@@ -57,3 +65,37 @@ def visualize_log(log, configs):
     plt.title("Loss per batch")
     filename = os.path.join(configs['log_visualize_dir'], 'loss_batch.png')
     plt.savefig(filename)
+
+
+from pycocotools.coco import COCO
+from pycocoevalcap.eval import COCOEvalCap
+
+def metric_scores(annotation_path, prediction_path):
+    # annotation_file = 'captions_val2014.json'
+    # results_file = 'captions_val2014_fakecap_results.json'
+    # format result file
+    # {'image_id': 1, 'caption': 'a caption'}
+
+    results = {}
+    # create coco object and coco_result object
+    coco = COCO(annotation_path)
+    coco_result = coco.loadRes(prediction_path)
+
+    # create coco_eval object by taking coco and coco_result
+    coco_eval = COCOEvalCap(coco, coco_result)
+
+    # evaluate on a subset of images by setting
+    # coco_eval.params['image_id'] = coco_result.getImgIds()
+    # please remove this line when evaluating the full validation set
+    coco_eval.params['image_id'] = coco_result.getImgIds()
+
+    # evaluate results
+    # SPICE will take a few minutes the first time, but speeds up due to caching
+    coco_eval.evaluate()
+
+    # print output evaluation scores
+    for metric, score in coco_eval.eval.items():
+        # print(f'{metric}: {score:.3f}')
+        dct[metric] = score
+    
+    return dct
