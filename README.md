@@ -18,16 +18,24 @@ Image Captioning by deep learning model with Encoder as Efficientnet and Decoder
 The objective of this project is to build a model that can generate captions for images.
 
 # 2. Model
-I use Encoder as Efficientnet to extract features from image and Decoder as Transformer to generate caption. But I also change the attention mechanism at step attention encoder output. Instead of using the Multi-Head Attention mechanism, I use the Bahdanau Attention mechanism each step to attend image features.
+I use Encoder as Efficientnet to extract features from image and Decoder as Transformer to generate caption. But I also change the attention mechanism at step attention encoder output. Instead of using the Multi-Head Attention mechanism, I use the Attention mechanism each step to attend image features.
 <figure align="center">
     <img src="./images/model_architecture.png" width="600"/>
     <figcaption>Model architecture: The architecture of the model Image Captioning with Encoder as Efficientnet and Decoder as Transformer</figcaption>
 </figure>
 
 # 3. Dataset
-I'm using the MSCOCO '14 Dataset. You'd need to download the Training (13GB),  Validation (6GB) and Test (6GB) splits from [MSCOCO](http://cocodataset.org/#download) and place them in the `data/mscoco` directory.
+I'm using the MSCOCO '14 Dataset. You'd need to download the Training (13GB),  Validation (6GB) and Test (6GB) splits from [MSCOCO](http://cocodataset.org/#download) and place them in the `../coco` directory.
 
-I'm also using Andrej Karpathy's split of the MSCOCO '14 dataset. It contains caption annotations for the MSCOCO, Flickr30k, and Flickr8k datasets. You can download it from [here](http://cs.stanford.edu/people/karpathy/deepimagesent/caption_datasets.zip).
+I'm also using Andrej Karpathy's split of the MSCOCO '14 dataset. It contains caption annotations for the MSCOCO, Flickr30k, and Flickr8k datasets. You can download it from [here](http://cs.stanford.edu/people/karpathy/deepimagesent/caption_datasets.zip). You'd need to unzip it and place it in the `../coco/karpathy` directory.
+In Andrej's split, the images are divided into train, val and test sets with the number of images in each set as shown in the table below:
+
+| Image/Caption | train | val | test |
+| :--- | :--- | :--- | :--- |
+| Image | 113287 | 5000 | 5000 |
+| Caption | 566747 | 25010 | 25010 |
+
+
 
 
 # 4. Training and Validation: Image Captioning
@@ -84,17 +92,14 @@ I evaluate the model on the validation set after each epoch. For each image, I g
 You can see the detaile in the `train.py` file.
 
 # 5. Evaluation
-I use beam search to generate captions with beam size of 3, 4, 5. I use the BLEU-4, METEOR, ROUGE-L, CIDEr, and SPICE score to evaluate the model. The results are shown in the table below.
+To evaluate the model, I used the [pycocoevalcap package](https://github.com/salaniz/pycocoevalcap).
 
+I use beam search to generate captions with beam size of 3, 4, 5. I use the BLEU-4, METEOR, ROUGE-L, CIDEr, and SPICE score to evaluate the model. The results on the test set (5000 images) are shown below.
 
-| BLEU-4 | METEOR | ROUGE-L | CIDEr | SPICE |
-| :--- | :--- | :--- | :--- | :--- |
-| 0.8 | 0.8 | 0.8 | 0.8 | 0.8 |
-| 0.8 | 0.8 | 0.8 | 0.8 | 0.8 |
-| 0.8 | 0.8 | 0.8 | 0.8 | 0.8 |
-| 0.8 | 0.8 | 0.8 | 0.8 | 0.8 |
-| 0.8 | 0.8 | 0.8 | 0.8 | 0.8 |
-
+| Metrics/ Beam Size| BLEU-4 | METEOR | ROUGE-L | CIDEr | SPICE |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 3 | 0.8 | 0.8 | 0.8 | 0.8 | 0.8 |
+| 4 | 0.8 | 0.8 | 0.8 | 0.8 | 0.8 |
+| 5 | 0.8 | 0.8 | 0.8 | 0.8 | 0.8 |
 
 # 6. Conclusion
-
