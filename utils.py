@@ -39,6 +39,8 @@ def visualize_log(log, configs):
     plt.figure()
     plt.plot(log["train_loss"], label="train")
     plt.plot(log["val_loss"], label="val")
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
     plt.legend()
     plt.title("Loss per epoch")
     filename = os.path.join(configs["log_visualize_dir"], "loss_epoch.png")
@@ -48,6 +50,8 @@ def visualize_log(log, configs):
     plt.figure()
     plt.plot(log["train_bleu4"], label="train")
     plt.plot(log["val_bleu4"], label="val")
+    plt.xlabel("Epoch")
+    plt.ylabel("Bleu4")
     plt.legend()
     plt.title("BLEU-4 per epoch")
     filename = os.path.join(configs["log_visualize_dir"], "bleu4_epoch.png")
@@ -64,6 +68,8 @@ def visualize_log(log, configs):
     for loss in log["val_loss_batch"]:
         val_loss_batch += loss
     plt.plot(val_loss_batch, label="val")
+    plt.xlabel("Batch")
+    plt.ylabel("Loss")
     plt.legend()
     plt.title("Loss per batch")
     filename = os.path.join(configs["log_visualize_dir"], "loss_batch.png")
