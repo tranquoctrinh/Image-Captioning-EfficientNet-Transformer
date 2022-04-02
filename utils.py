@@ -87,7 +87,7 @@ def metric_scores(annotation_path, prediction_path):
     coco_eval.evaluate()
     for metric, score in coco_eval.eval.items():
         print(f"{metric}: {score:.3f}")
-        results[metric] = round(score, 5)
+        results[metric] = score
 
     return results
 
