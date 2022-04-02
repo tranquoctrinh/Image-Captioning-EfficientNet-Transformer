@@ -122,20 +122,6 @@ def train(model, train_loader, valid_loader, optim, criterion, n_epochs, tokeniz
         
         best_train_bleu4 = train_bleu4 if train_bleu4 > best_train_bleu4 else best_train_bleu4
         
-        # Logfile
-        log["train_loss"].append(train_loss)
-        log["train_bleu4"].append(train_bleu4)
-        log["train_loss_batch"].append(train_loss_batch)
-        log["val_loss"].append(val_loss)
-        log["val_bleu4"].append(val_bleu4)
-        log["val_loss_batch"].append(val_loss_batch)
-        log["best_train_bleu4"] = best_train_bleu4
-        log["best_val_bleu4"] = best_val_bleu4
-        log["best_epoch"] = best_epoch
-        # Save log
-        with open(log_path, "w") as f:
-            json.dump(log, f)
-
         # Detect improvement and save model or early stopping and break
         if val_bleu4 > best_val_bleu4:
             best_val_bleu4 = val_bleu4
@@ -149,6 +135,20 @@ def train(model, train_loader, valid_loader, optim, criterion, n_epochs, tokeniz
             if count_early_stopping >= early_stopping:
                 print("-------- Early stopping --------")
                 break
+        
+        # Logfile
+        log["train_loss"].append(train_loss)
+        log["train_bleu4"].append(train_bleu4)
+        log["train_loss_batch"].append(train_loss_batch)
+        log["val_loss"].append(val_loss)
+        log["val_bleu4"].append(val_bleu4)
+        log["val_loss_batch"].append(val_loss_batch)
+        log["best_train_bleu4"] = best_train_bleu4
+        log["best_val_bleu4"] = best_val_bleu4
+        log["best_epoch"] = best_epoch
+        # Save log
+        with open(log_path, "w") as f:
+            json.dump(log, f)
 
         torch.cuda.empty_cache()
         
