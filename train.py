@@ -94,14 +94,21 @@ def validate_epoch(model, valid_loader, tokenizer, criterion, epoch, device):
     val_bleu4 = corpus_bleu(references, hypotheses, smoothing_function=smoothie.method4)
     return val_loss, val_bleu4, total_loss
 
-def train(model, train_loader, valid_loader, optim, criterion, n_epochs, tokenizer, device, model_path, log_path, early_stopping=5):
+def train(model, train_loader, valid_loader, optim, criterion, start_epoch, n_epochs, tokenizer, device, model_path, log_path, early_stopping=5):
     model.train()
-    log = {"train_loss": [], "train_bleu4": [], "train_loss_batch": [], "val_loss": [], "val_bleu4": [], "val_loss_batch": []}
-    best_train_bleu4, best_val_bleu4, best_epoch = -np.Inf, -np.Inf, 1
+    if start_epoch > 0:
+        log = json.load(open(log_path, "r"))
+        best_train_bleu4, best_val_bleu4, best_epoch = log["best_train_bleu4"], log["best_val_bleu4"], log["best_epoch"]
+        print("Load model from epoch {}, and continue training.".format(best_epoch))
+        model.load_state_dict(torch.load(model_path, map_location=device))
+    else:
+        log = {"train_loss": [], "train_bleu4": [], "train_loss_batch": [], "val_loss": [], "val_bleu4": [], "val_loss_batch": []}
+        best_train_bleu4, best_val_bleu4, best_epoch = -np.Inf, -np.Inf, 1
+
     count_early_stopping = 0
     start_time = time.time()
 
-    for epoch in range(n_epochs):
+    for epoch in range(start_epoch, n_epochs):
         train_loss, train_bleu4, train_loss_batch = train_epoch(
             model=model,
             train_loader=train_loader,
@@ -146,6 +153,7 @@ def train(model, train_loader, valid_loader, optim, criterion, n_epochs, tokeniz
         log["best_train_bleu4"] = best_train_bleu4
         log["best_val_bleu4"] = best_val_bleu4
         log["best_epoch"] = best_epoch
+        log["last_epoch"] = epoch + 1
         # Save log
         with open(log_path, "w") as f:
             json.dump(log, f)
@@ -157,7 +165,15 @@ def train(model, train_loader, valid_loader, optim, criterion, n_epochs, tokeniz
     return log
 
 
-def main():    
+def main():
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--n_epochs", type=int, default=50)
+    parser.add_argument("--batch_size", type=int, default=32)
+    parser.add_argument("--lr", type=float, default=1e-4)
+    parser.add_argument("--start_epoch", type=int, default=0)
+    args = parser.parse_args()
+
     device = torch.device(configs["device"])
 
     tokenizer = AutoTokenizer.from_pretrained(configs["tokenizer"])
@@ -215,6 +231,7 @@ def main():
         valid_loader=valid_loader,
         optim=optim,
         criterion=criterion,
+        start_epoch=args.start_epoch,
         n_epochs=configs["n_epochs"],
         tokenizer=tokenizer,
         device=device,
