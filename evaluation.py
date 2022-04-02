@@ -32,7 +32,7 @@ def generate_caption(model, image, tokenizer, max_seq_len=256, beam_size=3, devi
         # Feed forward Encoder
         encoder_output = model.encoder(image)
         # Initialize beam list
-        beams = [([tokenizer.bos_token_id], 0)]
+        beams = [([tokenizer.cls_token_id], 0)]
         completed = []
         # Start decoding
         for _ in range(max_seq_len):
@@ -60,7 +60,7 @@ def generate_caption(model, image, tokenizer, max_seq_len=256, beam_size=3, devi
             beams = sorted(beams, key=lambda x: x[1], reverse=True)[:beam_size]
             # Add completed beams to completed list and reduce beam size
             for beam in beams:
-                if beam[0][-1] == tokenizer.eos_token_id:
+                if beam[0][-1] == tokenizer.sep_token_id:
                     completed.append(beam)
                     beams.remove(beam)
                     beam_size -= 1
@@ -104,7 +104,7 @@ def load_model_tokenizer(configs):
         num_heads=configs["num_heads"],
         dropout=configs["dropout"],
     )
-    model.load_state_dict(torch.load(configs["model"]))
+    model.load_state_dict(torch.load(configs["model_path"], map_location=device))
     model.to(device)
     model.eval()
     print(f"Done load model on the {device} device")
@@ -146,7 +146,7 @@ def evaluate():
             image = image.unsqueeze(0)
 
             # Generate caption
-            cap = generate_caption(model, image, tokenizer, beam_size=b, device=device)
+            cap = generate_caption(model=model, image=image, tokenizer=tokenizer, beam_size=b, device=device, print_process=False)
             result.append({"image_id": image_id, "caption": cap})
         # Save result
         result_path = os.path.join(output_dir, f"prediction_beam_size_{b}.json")
@@ -163,15 +163,14 @@ def evaluate():
 def main():
     # Generate caption
     model, tokenizer, device = load_model_tokenizer(configs)
+
     st = time.time()
-    cap = caption(model, "./data/images/test.jpg", tokenizer, configs["transform"], print_process=False)
-    cap = caption(
+    cap = generate_caption(
         model=model,
-        image_path="./data/images/test.jpg",
+        image=preprocess_image("./images/test.jpg", transform),
         tokenizer=tokenizer,
-        transform=tranform,
         max_seq_len=configs["max_seq_len"],
-        beam_size=configs["beam_size"],
+        beam_size=3,
         device=device,
         print_process=False
     )
