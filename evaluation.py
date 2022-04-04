@@ -163,24 +163,5 @@ def evaluate():
     json.dump(scores, open(f"results/scores.json", "w"))
 
 
-def main():
-    # Generate caption
-    model, tokenizer, device = load_model_tokenizer(configs)
-
-    st = time.time()
-    cap = generate_caption(
-        model=model,
-        image=preprocess_image("./images/test.jpg", transform),
-        tokenizer=tokenizer,
-        max_seq_len=configs["max_seq_len"],
-        beam_size=3,
-        device=device,
-        print_process=False
-    )
-    end = time.time()
-    print("--- Caption: {}".format(cap))
-    print(f"--- Time: {end-st} (s)")
-
-
 if __name__ == "__main__":
     evaluate()
