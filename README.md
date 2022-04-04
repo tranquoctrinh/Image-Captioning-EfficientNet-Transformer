@@ -12,7 +12,8 @@ Image Captioning by deep learning model with Encoder as Efficientnet and Decoder
     - [4.1.3. Hyperparameters](#413-hyperparameters)
   - [4.2. Validation](#42-validation)
 - [5. Evaluation](#5-evaluation)
-- [6. Conclusion](#6-conclusion)
+- [6. Inferece](#6-inferece)
+- [7. Conclusion](#7-conclusion)
 
 # 1. Objective
 The objective of this project is to build a model that can generate captions for images.
@@ -108,4 +109,26 @@ I use beam search to generate captions with beam size of 3, 4, 5. I use the BLEU
 | Beam Size 4 | 0.8 | 0.8 | 0.8 | 0.8 | 0.8 |
 | Beam Size 5 | 0.8 | 0.8 | 0.8 | 0.8 | 0.8 |
 
-# 6. Conclusion
+# 6. Inferece
+See the file `caption.py`.
+```python
+from utils import configs
+from evaluation import load_model_tokenizer, generate_caption
+
+model, tokenizer, device = load_model_tokenizer(configs)
+
+cap = generate_caption(
+    model=model,
+    image=preprocess_image("./images/test.jpg", transform),
+    tokenizer=tokenizer,
+    max_seq_len=configs["max_seq_len"],
+    beam_size=3,
+    device=device,
+    print_process=False
+)
+print("--- Caption: {}".format(cap))
+```
+Some caption examples are shown below.
+
+
+# 7. Conclusion
