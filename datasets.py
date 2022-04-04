@@ -11,17 +11,18 @@ from transformers import BertTokenizer
 import json
 from tqdm import tqdm
 
+from utils import configs
 
 
-def preprocess_image(configs, transform):
+def create_image_inputs(karpathy_json_path, image_dir, transform):
     """
     This function preprocesses the image and saves it in the image_dir.
     I's faster for the training process to load the images from the torch file.
     """
-    karpathy = json.load(open(configs["karpathy_json_path"], "r"))
+    karpathy = json.load(open(karpathy_json_path, "r"))
     bar = tqdm(karpathy["images"])
     for image in bar:
-        image_path = os.path.join(configs["image_dir"], image["file_path"])
+        image_path = os.path.join(image_dir, image["filepath"], image["filename"])
         image = Image.open(image_path).convert("RGB")
         image = transform(image)
         torch.save(image, image_path.replace(".jpg", ".pt"))
@@ -96,12 +97,14 @@ if __name__ == "__main__":
     ])
     
     tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
-    train_dataset = ImageCaptionDataset(
-        karpathy_json_path="../coco/dataset_coco.json", 
-        image_dir="./coco/coco_images/", 
+    dataset = ImageCaptionDataset(
+        karpathy_json_path=configs["karpathy_json_path"], 
+        image_dir="../coco/", 
         tokenizer=tokenizer,
         max_seq_len=128,
         transform=transform, 
         phase="train"
     )
     print(dataset[0])
+
+    create_image_inputs(configs["karpathy_json_path"], "../coco/", transform)
