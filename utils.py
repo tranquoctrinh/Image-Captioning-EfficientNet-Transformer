@@ -6,14 +6,14 @@ from torchvision import transforms
 
 
 configs = {
-    "batch_size": 32,
+    "batch_size": 16,
     "lr": 1e-4,
     "n_epochs": 50,
     "max_seq_len": 128,
     "tokenizer": "bert-base-cased",
     "model_path": "./model_image_captioning_eff_transfomer.pt",
     "device": "cuda:0" if torch.cuda.is_available() else "cpu",
-    "embedding_dim": 512,
+    "embedding_dim": 512, # embedding_dim must be a divisor of 7 * 7 * 2048
     "attention_dim": 256,
     "num_layers": 8,
     "num_heads": 8,
