@@ -120,76 +120,151 @@ class MultiHeadAttention(nn.Module):
         output = self.out(output)
         return output
 
-# SoftAttention
+
+'''
+# Bahdanau Attention
 class SoftAttention(nn.Module):
     """
-    Attention Network.
+    Bahdanau Attention
     """
-
     def __init__(self, encoder_dim, decoder_dim, attention_dim):
         super(SoftAttention, self).__init__()
         self.encoder_dim = encoder_dim
-        self.encoder_att = nn.Linear(2048, attention_dim)
-        self.decoder_att = nn.Linear(decoder_dim, attention_dim)
-        self.full_att = nn.Linear(attention_dim, 1)
-        self.relu = nn.ReLU()
-        self.softmax = nn.Softmax(dim=1)
-
-    def forward(self, memory, decoder_hidden):
-        batch_size = memory.size(0) # batch size
-        memory = memory.reshape(batch_size, -1, 2048)  # (batch_size, num_pixels, encoder_dim)
-        att1 = self.encoder_att(memory)  # (batch_size, num_pixels, attention_dim)
-        att2 = self.decoder_att(decoder_hidden)  # (batch_size, max_seq_len, attention_dim)
-        att = self.softmax(torch.matmul(att1, att2.transpose(1, 2)))/np.sqrt(self.encoder_dim)
-        # (batch_size, num_pixels, max_seq_len)
-        
-        return att
-
-# Bahdanau Attention
-class BahdanauAttention(nn.Module):
-    def __init__(self, encoder_dim, decoder_dim, attention_dim):
-        super(BahdanauAttention, self).__init__()
+        self.decoder_dim = decoder_dim
+        self.attention_dim = attention_dim
         self.encoder_att = nn.Linear(encoder_dim, attention_dim)  # linear layer to transform encoded image
         self.decoder_att = nn.Linear(decoder_dim, attention_dim)  # linear layer to transform decoder's output
         self.full_att = nn.Linear(attention_dim, 1)  # linear layer to calculate values to be softmax-ed
         self.relu = nn.ReLU()
         self.softmax = nn.Softmax(dim=1)  # softmax layer to calculate weights
 
-    def forward(self, encoder_out, decoder_hidden):
+    def step(self, encoder_out, decoder_hidden):
         att1 = self.encoder_att(encoder_out)  # (batch_size, num_pixels, attention_dim)
         att2 = self.decoder_att(decoder_hidden)  # (batch_size, attention_dim)
         att = self.full_att(self.relu(att1 + att2.unsqueeze(1))).squeeze(2)  # (batch_size, num_pixels)
         alpha = self.softmax(att)  # (batch_size, num_pixels)
         attention_weighted_encoding = (encoder_out * alpha.unsqueeze(2)).sum(dim=1)  # (batch_size, encoder_dim)
         return attention_weighted_encoding, alpha
+    
+    def forward(self, memory, decoder_hidden):
+        batch_size = memory.size(0) # batch size
+        memory = memory.reshape(batch_size, -1, self.encoder_dim)  # (batch_size, num_pixels, encoder_dim)
+        max_seq_len = decoder_hidden.size(-2)
+        weights = torch.zeros(batch_size, max_seq_len, self.decoder_dim).to(memory.device) # (batch_size, max_seq_len, decoder_dim)
+        alphas = torch.zeros(batch_size, max_seq_len, memory.size(-2)).to(memory.device) # (batch_size, max_seq_len, num_pixels)
+        
+        # Attention each time step
+        for i in range(max_seq_len):
+            weight, alpha = self.step(memory, decoder_hidden[:, i, :])
+            weights[:, i, :] = weight
+            alphas[:, i, :] = alpha
+
+        return weights, alphas
+
+
+# Bahdanau Attention
+class SoftAttention(nn.Module):
+    """
+    Bahdanau Attention
+    """
+    def __init__(self, encoder_dim, decoder_dim, attention_dim):
+        super(SoftAttention, self).__init__()
+        self.encoder_dim = encoder_dim
+        self.decoder_dim = decoder_dim
+        self.attention_dim = attention_dim
+        self.encoder_att = nn.Linear(encoder_dim, attention_dim)  # linear layer to transform encoded image
+        self.decoder_att = nn.Linear(decoder_dim, attention_dim)  # linear layer to transform decoder's output
+        self.full_att = nn.Linear(attention_dim, 1)  # linear layer to calculate values to be softmax-ed
+        self.relu = nn.ReLU()
+        self.softmax = nn.Softmax(dim=-1)  # softmax layer to calculate weights
+
+    def forward(self, memory, decoder_hidden):
+        batch_size = memory.size(0) # batch size
+        max_seq_len = decoder_hidden.size(-2)
+        memory = memory.reshape(batch_size, -1, self.encoder_dim)  # (batch_size, num_pixels, encoder_dim)
+        num_pixels = memory.size(-2)
+
+        att1 = self.encoder_att(memory)  # (batch_size, num_pixels, attention_dim)
+        att2 = self.decoder_att(decoder_hidden)  # (batch_size, max_seq_len, attention_dim)
+        att = torch.zeros(batch_size, max_seq_len, num_pixels).to(memory.device) # (batch_size, max_seq_len, num_pixels)
+
+        for i in range(max_seq_len):
+            att[:, i, :] = self.full_att(self.relu(att1 + att2[:, i, :].unsqueeze(1))).squeeze(2)  # (batch_size, num_pixels)
+        alpha = self.softmax(att)  # (batch_size, max_seq_len, num_pixels)
+        attention_weighted_encoding = torch.zeros_like(decoder_hidden) # (batch_size, max_seq_len, decoder_dim)
+        
+        for i in range(max_seq_len):
+            attention_weighted_encoding[:, i, :] = (memory * alpha[:, i, :].unsqueeze(2)).sum(dim=1) # (batch_size, encoder_dim)
+
+        return attention_weighted_encoding, alpha
+'''
+
+# Attention Myself
+class SoftAttention(nn.Module):
+    """
+    Attention Myself
+    """
+    def __init__(self, encoder_dim, decoder_dim, attention_dim):
+        super(SoftAttention, self).__init__()
+        self.encoder_dim = encoder_dim
+        self.decoder_dim = decoder_dim
+        self.attention_dim = attention_dim
+        self.self_attention = SelfAttention()
+        self.encoder_att = nn.Linear(encoder_dim, attention_dim)  # linear layer to transform encoded image
+        self.decoder_att = nn.Linear(decoder_dim, attention_dim)  # linear layer to transform decoder's output
+        self.full_att = nn.Linear(attention_dim, 1)  # linear layer to calculate values to be softmax-ed
+        self.relu = nn.ReLU()
+        self.softmax = nn.Softmax(dim=-1)  # softmax layer to calculate weights
+
+    def forward(self, memory, decoder_hidden, mask):
+        batch_size = memory.size(0) # batch size
+        max_seq_len = decoder_hidden.size(-2)
+        memory = memory.reshape(batch_size, -1, self.encoder_dim)  # (batch_size, num_pixels, encoder_dim)
+        num_pixels = memory.size(-2)
+
+        att1 = self.encoder_att(memory)  # (batch_size, num_pixels, attention_dim)
+
+        decoder_hidden = decoder_hidden.unsqueeze(1) # (batch_size, 1, max_seq_len, decoder_dim)
+        decoder_hidden = self.self_attention(decoder_hidden, decoder_hidden, decoder_hidden, mask)
+        decoder_hidden = decoder_hidden.squeeze(1) # (batch_size, max_seq_len, decoder_dim)
+        
+        att2 = self.decoder_att(decoder_hidden) # (batch_size, max_seq_len, attention_dim)
+
+        att = torch.matmul(att2, self.softmax(att1).transpose(-2, -1)) # (batch_size, max_seq_len, num_pixels)
+        return att
+
 
 
 # Transformer decoder layer
 class DecoderLayer(nn.Module):
     def __init__(self, embedding_dim, attention_dim, num_heads, dropout=0.1):
         super(DecoderLayer, self).__init__()
+        self.embedding_dim = embedding_dim
+        self.attention_dim = attention_dim
+        self.num_heads = num_heads
         self.self_attention = MultiHeadAttention(embedding_dim, num_heads, dropout)
         self.encoder_attention = SoftAttention(embedding_dim, embedding_dim, attention_dim)
         self.feed_forward = nn.Sequential(
-            nn.Linear(embedding_dim + 49, embedding_dim * 2),
+            nn.Linear(embedding_dim + 2048*7*7//embedding_dim, embedding_dim * 4),
             nn.ReLU(),
-            nn.Linear(embedding_dim * 2, embedding_dim)
+            nn.Linear(embedding_dim * 4, embedding_dim)
         )
         self.dropout1 = nn.Dropout(dropout)
         self.dropout2 = nn.Dropout(dropout)
         self.dropout3 = nn.Dropout(dropout)
         self.norm1 = Norm(embedding_dim)
         self.norm2 = Norm(embedding_dim)
-        self.norm3 = Norm(embedding_dim + 49)
+        self.norm3 = Norm(embedding_dim + 2048*7*7//embedding_dim)
 
     def forward(self, x, memory, target_mask):
         x2 = self.norm1(x)
         x = x + self.dropout1(self.self_attention(x2, x2, x2, target_mask))
         x2 = self.norm1(x)
-        att = self.dropout2(self.encoder_attention(memory, x2)) # (batch_size, num_pixels, max_seq_len)
-        att = att.transpose(1, 2) # (batch_size, max_seq_len, num_pixels)
-        x2 = torch.cat([x, att], dim=-1) # (batch_size, max_seq_len, embedding_dim + num_pixels)
+
+        img_att = self.dropout2(self.encoder_attention(memory, x2, target_mask))
+        x2 = torch.cat([x, img_att], dim=-1)
         x2 = self.norm3(x2)
+
         x = x + self.dropout3(self.feed_forward(x2))
         return x
 
