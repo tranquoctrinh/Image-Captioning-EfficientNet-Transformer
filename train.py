@@ -196,9 +196,25 @@ def main():
     parser.add_argument("--log_path", "-lp", type=str, default="./images/log_training.json", help="Path to log file for training")
     parser.add_argument("--log_visualize_dir", "-lvd", type=str, default="./images/", help="Directory to save log visualization")    
     args = parser.parse_args()
+
+
     print("-------- Training parameters ------------")
     print(args)
     print("-----------------------------------------")
+    print("-------- Check directory existence ------------")
+    if not os.path.exists(args.log_visualize_dir):
+        print(f"Create directory {args.log_visualize_dir}")
+        os.makedirs(args.log_visualize_dir)
+    model_path_dir = os.path.dirname(args.model_path)
+    if not os.path.exists(model_path_dir):
+        print(f"Create directory {model_path_dir}")
+        os.makedirs(model_path_dir)
+    if not os.path.exists(args.image_dir):
+        print("Directory image_dir {} does not exist".format(args.image_dir))
+        return
+    print("-----------------------------------------")
+
+
     device = torch.device(args.device)
     tokenizer = AutoTokenizer.from_pretrained(args.tokenizer)
     model = ImageCaptionModel(
