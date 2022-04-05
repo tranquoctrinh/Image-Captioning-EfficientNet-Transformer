@@ -53,9 +53,10 @@ class PositionalEncoder(nn.Module):
 
 # Encoder model image captioning with EfficientNet
 class Encoder(nn.Module):
-    def __init__(self):
+    def __init__(self, depth=5, fine_tune=True):
         super(Encoder, self).__init__()
-        self.model = EfficientNet.from_pretrained('efficientnet-b5')
+        self.model = EfficientNet.from_pretrained(f'efficientnet-b{depth}')
+        self.set_fine_tune(fine_tune)
 
     def forward(self, images):
         # images: (batch_size, 3, 224, 224)
@@ -64,7 +65,10 @@ class Encoder(nn.Module):
         features = features.permute(0, 2, 3, 1)
         # features: (batch_size, 7, 7, 2048)
         return features
-      
+
+    def set_fine_tune(self, fine_tune=True):
+        for p in self.model.parameters():
+            p.requires_grad = fine_tune
 
 # Self-attention layer
 class SelfAttention(nn.Module):
