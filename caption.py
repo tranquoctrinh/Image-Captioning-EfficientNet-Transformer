@@ -6,7 +6,7 @@ from transformers import BertTokenizer
 
 from utils import transform
 from models import ImageCaptionModel
-from evaluation import generate_caption, preprocess_image
+from evaluation import generate_caption
 
 
 
