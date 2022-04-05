@@ -62,33 +62,34 @@ def validate_epoch(model, valid_loader, tokenizer, criterion, epoch, device):
     model.eval()
     total_loss, batch_bleu4 = [], []
     hypotheses, references = [], []
-    bar = tqdm(enumerate(valid_loader), total=len(valid_loader), desc=f"Validating epoch {epoch+1}")
-    for i, batch in bar:
-        image, caption, all_caps = batch["image"].to(device), batch["caption"].to(device), batch["all_captions_seq"]
-        target_input = caption[:, :-1]
-        target_mask = model.make_mask(target_input)
-        preds = model(image, target_input)
+    with torch.no_grad():
+        bar = tqdm(enumerate(valid_loader), total=len(valid_loader), desc=f"Validating epoch {epoch+1}")
+        for i, batch in bar:
+            image, caption, all_caps = batch["image"].to(device), batch["caption"].to(device), batch["all_captions_seq"]
+            target_input = caption[:, :-1]
+            target_mask = model.make_mask(target_input)
+            preds = model(image, target_input)
 
-        gold = caption[:, 1:].contiguous().view(-1)
-        loss = criterion(preds.view(-1, preds.size(-1)), gold)
-        total_loss.append(loss.item())
+            gold = caption[:, 1:].contiguous().view(-1)
+            loss = criterion(preds.view(-1, preds.size(-1)), gold)
+            total_loss.append(loss.item())
 
-        preds = F.softmax(preds, dim=-1)
-        preds = torch.argmax(preds, dim=-1)
-        preds = preds.detach().cpu().numpy()
-        caps = [tokenizer.decode(cap, skip_special_tokens=True) for cap in preds]
-        hypo = [cap.split() for cap in caps]
-        
-        batch_size = len(hypo)
-        ref = []
-        for i in range(batch_size):
-            ri = [all_caps[j][i].split() for j in range(len(all_caps)) if all_caps[j][i]]
-            ref.append(ri)
-        batch_bleu4.append(corpus_bleu(ref, hypo, smoothing_function=smoothie.method4))
-        hypotheses += hypo
-        references += ref
+            preds = F.softmax(preds, dim=-1)
+            preds = torch.argmax(preds, dim=-1)
+            preds = preds.detach().cpu().numpy()
+            caps = [tokenizer.decode(cap, skip_special_tokens=True) for cap in preds]
+            hypo = [cap.split() for cap in caps]
+            
+            batch_size = len(hypo)
+            ref = []
+            for i in range(batch_size):
+                ri = [all_caps[j][i].split() for j in range(len(all_caps)) if all_caps[j][i]]
+                ref.append(ri)
+            batch_bleu4.append(corpus_bleu(ref, hypo, smoothing_function=smoothie.method4))
+            hypotheses += hypo
+            references += ref
 
-        bar.set_postfix(loss=total_loss[-1], bleu4=batch_bleu4[-1])
+            bar.set_postfix(loss=total_loss[-1], bleu4=batch_bleu4[-1])
 
     val_loss = sum(total_loss) / len(total_loss)
     val_bleu4 = corpus_bleu(references, hypotheses, smoothing_function=smoothie.method4)
@@ -195,9 +196,9 @@ def main():
     parser.add_argument("--log_path", "-lp", type=str, default="./images/log_training.json", help="Path to log file for training")
     parser.add_argument("--log_visualize_dir", "-lvd", type=str, default="./images/", help="Directory to save log visualization")    
     args = parser.parse_args()
-    print("---- Training parameters ----")
+    print("-------- Training parameters ------------")
     print(args)
-    print("---------------------------")
+    print("-----------------------------------------")
     device = torch.device(args.device)
     tokenizer = AutoTokenizer.from_pretrained(args.tokenizer)
     model = ImageCaptionModel(
