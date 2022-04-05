@@ -5,27 +5,6 @@ import json
 from torchvision import transforms
 
 
-configs = {
-    "batch_size": 16,
-    "lr": 1e-4,
-    "n_epochs": 50,
-    "max_seq_len": 128,
-    "tokenizer": "bert-base-cased",
-    "model_path": "./model_image_captioning_eff_transfomer.pt",
-    "device": "cuda:0" if torch.cuda.is_available() else "cpu",
-    "embedding_dim": 512, # embedding_dim must be a divisor of 7 * 7 * 2048
-    "attention_dim": 256,
-    "num_layers": 8,
-    "num_heads": 8,
-    "dropout": 0.1,
-    "early_stopping": 5,
-    "image_dir": "../coco/",
-    "karpathy_json_path": "../coco/karpathy/dataset_coco.json",
-    "val_annotation_path": "../coco/annotations/captions_val2014.json",
-    "train_annotation_path": "../coco/annotations/captions_train2014.json",
-    "log_path": "./images/log_training.json",
-    "log_visualize_dir": "./images/",
-}
 
 transform = transforms.Compose([
     transforms.Resize(256),
@@ -34,7 +13,7 @@ transform = transforms.Compose([
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
 
-def visualize_log(log, configs):
+def visualize_log(log, log_visualize_dir):
     # Plot loss per epoch
     plt.figure()
     plt.plot(log["train_loss"], label="train")
@@ -43,7 +22,7 @@ def visualize_log(log, configs):
     plt.ylabel("Loss")
     plt.legend()
     plt.title("Loss per epoch")
-    filename = os.path.join(configs["log_visualize_dir"], "loss_epoch.png")
+    filename = os.path.join(log_visualize_dir, "loss_epoch.png")
     plt.savefig(filename)
 
     # Plot bleu4 per epoch
@@ -54,7 +33,7 @@ def visualize_log(log, configs):
     plt.ylabel("Bleu4")
     plt.legend()
     plt.title("BLEU-4 per epoch")
-    filename = os.path.join(configs["log_visualize_dir"], "bleu4_epoch.png")
+    filename = os.path.join(log_visualize_dir, "bleu4_epoch.png")
     plt.savefig(filename)
 
     # Plot loss per batch
@@ -72,7 +51,7 @@ def visualize_log(log, configs):
     plt.ylabel("Loss")
     plt.legend()
     plt.title("Loss per batch")
-    filename = os.path.join(configs["log_visualize_dir"], "loss_batch.png")
+    filename = os.path.join(log_visualize_dir, "loss_batch.png")
     plt.savefig(filename)
 
 
@@ -98,10 +77,10 @@ def metric_scores(annotation_path, prediction_path):
     return results
 
 
-def convert_karpathy_to_coco_format(karpathy_path, coco_path, phase="test"):
+def convert_karpathy_to_coco_format(karpathy_path, annotation_path, phase="test"):
     # phase in {"train", "val", "test"}
     phase = {"train", "restval"} if phase == "train" else {phase}
-    coco = json.load(open(coco_path))
+    coco = json.load(open(annotation_path))
     karpathy = json.load(open(karpathy_path))
 
     karpathy_ids = set([x["cocoid"] for x in karpathy["images"] if x["split"] in phase])

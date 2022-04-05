@@ -11,7 +11,7 @@ from transformers import BertTokenizer
 import json
 from tqdm import tqdm
 
-from utils import configs
+from utils import transform
 
 
 def create_image_inputs(karpathy_json_path, image_dir, transform):
@@ -89,22 +89,26 @@ class ImageCaptionDataset(Dataset):
 
 # Test
 if __name__ == "__main__":
-    transform = transforms.Compose([
-        transforms.Resize(256),
-        transforms.CenterCrop(224),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    ])
+    import argparse
+    parser = argparse.ArgumentParser()
+    # Model parameters
+    parser.add_argument("--tokenizer", "-t", type=str, default="bert-base-uncased", help="Bert tokenizer")
+    parser.add_argument("--max_seq_len", "-msl", type=int, default=128, help="Maximum sequence length for caption generation")
+    parser.add_argument("--batch_size", "-bs", type=int, default=16, help="Batch size")
+    # Data parameters
+    parser.add_argument("--image_dir", "-id", type=str, default="../coco/", help="Path to image directory, this contains train2014, val2014")
+    parser.add_argument("--karpathy_json_path", "-kap", type=str, default="../coco/karpathy/dataset_coco.json", help="Path to karpathy json file")
+    args = parser.parse_args()
     
-    tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
+    tokenizer = BertTokenizer.from_pretrained(args.tokenizer)
     dataset = ImageCaptionDataset(
-        karpathy_json_path=configs["karpathy_json_path"], 
-        image_dir="../coco/", 
+        karpathy_json_path=args.karpathy_json_path,
+        image_dir=args.image_dir,
         tokenizer=tokenizer,
-        max_seq_len=128,
+        max_seq_len=args.max_seq_len,
         transform=transform, 
         phase="train"
     )
     print(dataset[0])
 
-    create_image_inputs(configs["karpathy_json_path"], "../coco/", transform)
+    create_image_inputs(args.karpathy_json_path, args.image_dir, transform)

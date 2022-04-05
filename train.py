@@ -13,7 +13,7 @@ import json
 from nltk.translate.bleu_score import SmoothingFunction
 smoothie = SmoothingFunction()
 
-from utils import configs, visualize_log, transform
+from utils import transform, visualize_log
 from datasets import ImageCaptionDataset
 from models import ImageCaptionModel
 
@@ -168,45 +168,67 @@ def train(model, train_loader, valid_loader, optim, criterion, start_epoch, n_ep
 def main():
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--n_epochs", type=int, default=50)
-    parser.add_argument("--batch_size", type=int, default=32)
-    parser.add_argument("--lr", type=float, default=1e-4)
-    parser.add_argument("--start_epoch", type=int, default=0)
+    # Model parameters
+    parser.add_argument("--embedding_dim", "-ed", type=int, default=512, help="Embedding dimension (embedding_dim must be a divisor of 7*7*2048)")
+    parser.add_argument("--attention_dim", "-ad", type=int, default=256, help="Attention dim")
+    parser.add_argument("--tokenizer", "-t", type=str, default="bert-base-uncased", help="Bert tokenizer")
+    parser.add_argument("--max_seq_len", "-msl", type=int, default=128, help="Maximum sequence length for caption generation")
+    parser.add_argument("--num_layers", "-nl", type=int, default=8, help="Number of layers in the transformer decoder")
+    parser.add_argument("--num_heads", "-nh", type=int, default=8, help="Number of heads in multi-head attention")
+    parser.add_argument("--dropout", "-dr", type=float, default=0.1, help="Dropout probability")
+    # Training parameters
+    parser.add_argument("--model_path", "-md", type=str, default="./pretrained/model_image_captioning_eff_transfomer.pt", help="Path to save model")
+    parser.add_argument("--device", "-d", type=str, default="cuda:0", help="Device to use {cpu, cuda:0, cuda:1,...}")
+    parser.add_argument("--batch_size", "-bs", type=int, default=16, help="Batch size")
+    parser.add_argument("--n_epochs", "-ne", type=int, default=50, help="Number of epochs")
+    parser.add_argument("--start_epoch", "-se", type=int, default=0, help="Start epoch. If start_epoch > 0, load model from model_path and continue training")
+    parser.add_argument("--learning_rate", "-lr", type=float, default=1e-4, help="Learning rate")
+    parser.add_argument("--betas", "-bt", type=tuple, default=(0.9, 0.98), help="Adam optimizer betas")
+    parser.add_argument("--eps", "-eps", type=float, default=1e-9, help="Adam optimizer epsilon")
+    parser.add_argument("--early_stopping", "-es", type=int, default=5, help="Early stopping")
+    # Data parameters
+    parser.add_argument("--image_dir", "-id", type=str, default="../coco/", help="Path to image directory, this contains train2014, val2014")
+    parser.add_argument("--karpathy_json_path", "-kap", type=str, default="../coco/karpathy/dataset_coco.json", help="Path to karpathy json file")
+    parser.add_argument("--val_annotation_path", "-vap", type=str, default="../coco/annotations/captions_val2014.json", help="Path to validation annotation file")
+    parser.add_argument("--train_annotation_path", "-tap", type=str, default="../coco/annotations/captions_train2014.json", help="Path to training annotation file")
+    # Log parameters
+    parser.add_argument("--log_path", "-lp", type=str, default="./images/log_training.json", help="Path to log file for training")
+    parser.add_argument("--log_visualize_dir", "-lvd", type=str, default="./images/", help="Directory to save log visualization")    
     args = parser.parse_args()
-
-    device = torch.device(configs["device"])
-
-    tokenizer = AutoTokenizer.from_pretrained(configs["tokenizer"])
-
+    print("---- Training parameters ----")
+    print(args)
+    print("---------------------------")
+    device = torch.device(args.device)
+    tokenizer = AutoTokenizer.from_pretrained(args.tokenizer)
     model = ImageCaptionModel(
-        embedding_dim=configs["embedding_dim"],
-        attention_dim=configs["attention_dim"],
+        embedding_dim=args.embedding_dim,
+        attention_dim=args.attention_dim,
         vocab_size=tokenizer.vocab_size,
-        max_seq_len=configs["max_seq_len"],
-        num_layers=configs["num_layers"],
-        num_heads=configs["num_heads"],
-        dropout=configs["dropout"],
+        max_seq_len=args.max_seq_len,
+        num_layers=args.num_layers,
+        num_heads=args.num_heads,
+        dropout=args.dropout,
     )
     print("Model to {}".format(device))
     model.to(device)
 
     criterion = nn.CrossEntropyLoss(ignore_index=tokenizer.pad_token_id)
-    optim = torch.optim.Adam(model.parameters(), lr=configs["lr"], betas=(0.9, 0.98), eps=1e-9)
+    optim = torch.optim.Adam(model.parameters(), lr=args.learning_rate, betas=args.betas, eps=args.eps)
 
     # Dataset
     train_dataset = ImageCaptionDataset(
-        karpathy_json_path=configs["karpathy_json_path"],
-        image_dir=configs["image_dir"],
+        karpathy_json_path=args.karpathy_json_path,
+        image_dir=args.image_dir,
         tokenizer=tokenizer,
-        max_seq_len=configs["max_seq_len"],
+        max_seq_len=args.max_seq_len,
         transform=transform, 
         phase="train"
     )
     valid_dataset = ImageCaptionDataset(
-        karpathy_json_path=configs["karpathy_json_path"],
-        image_dir=configs["image_dir"],
+        karpathy_json_path=args.karpathy_json_path,
+        image_dir=args.image_dir,
         tokenizer=tokenizer,
-        max_seq_len=configs["max_seq_len"],
+        max_seq_len=args.max_seq_len,
         transform=transform, 
         phase="val"
     )
@@ -214,17 +236,17 @@ def main():
     # DataLoader
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
-        batch_size=configs["batch_size"],
+        batch_size=args.batch_size,
         shuffle=True
     )
     valid_loader = torch.utils.data.DataLoader(
         valid_dataset,
-        batch_size=configs["batch_size"],
+        batch_size=args.batch_size,
         shuffle=False
     )
 
-    start_time = time.time()
     # Train
+    start_time = time.time()
     log = train(
         model=model,
         train_loader=train_loader,
@@ -232,12 +254,12 @@ def main():
         optim=optim,
         criterion=criterion,
         start_epoch=args.start_epoch,
-        n_epochs=configs["n_epochs"],
+        n_epochs=args.n_epochs,
         tokenizer=tokenizer,
         device=device,
-        model_path=configs["model_path"],
-        log_path=configs["log_path"],
-        early_stopping=configs["early_stopping"]
+        model_path=args.model_path,
+        log_path=args.log_path,
+        early_stopping=args.early_stopping
     )
 
     print(f"======================== Training finished: {timedelta(seconds=int(time.time()-start_time))} ========================")
@@ -246,11 +268,10 @@ def main():
     print(f"---- Best epoch: {log['best_epoch']}")
 
     # Save log
-    with open(configs["log_path"], "w") as f:
-        json.dump(log, f)
+    json.dump(log, open(args.log_path, "w"))
     
-    # Visualize loss
-    visualize_log(log, configs)
+    # Visualize loss and save to log_visualize_dir
+    visualize_log(log, args.log_visualize_dir)
 
 
 if __name__ == "__main__":

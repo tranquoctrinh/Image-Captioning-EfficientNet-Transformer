@@ -8,24 +8,20 @@ from tqdm import tqdm
 import time
 import os
 import json
-from utils import configs, transform, metric_scores, convert_karpathy_to_coco_format
+from datetime import datetime, timedelta
+from utils import transform, metric_scores, convert_karpathy_to_coco_format
 from models import ImageCaptionModel
 from datasets import ImageCaptionDataset
 
 
-def preprocess_image(image_path, transform):
+
+def generate_caption(model, image_path, transform, tokenizer, max_seq_len=256, beam_size=3, device=torch.device("cpu"), print_process=False):
     """
-    This function will preprocess image
+    This funciton will generate caption for an image
     """
     image = PIL.Image.open(image_path).convert("RGB")
     image = transform(image)
     image = image.unsqueeze(0)
-    return image
-
-def generate_caption(model, image, tokenizer, max_seq_len=256, beam_size=3, device=torch.device("cpu"), print_process=False):
-    """
-    This funciton will generate caption for an image
-    """
     image = image.to(device)
     # Generate caption
     with torch.no_grad():
@@ -77,7 +73,6 @@ def generate_caption(model, image, tokenizer, max_seq_len=256, beam_size=3, devi
             if beam_size == 0:
                 break
 
-
         # Sort the completed beams
         completed.sort(key=lambda x: x[1], reverse=True)
         # Get target sentence tokens
@@ -87,81 +82,96 @@ def generate_caption(model, image, tokenizer, max_seq_len=256, beam_size=3, devi
         return caption
 
 
-def load_model_tokenizer(configs):
-    """
-    This function will load model and tokenizer from pretrained model and tokenizer
-    """
-    device = torch.device(configs["device"])
-    tokenizer = BertTokenizer.from_pretrained(configs["tokenizer"])  
-
-    # Load model ImageCaptionModel
-    model = ImageCaptionModel(
-        embedding_dim=configs["embedding_dim"],
-        attention_dim=configs["attention_dim"],
-        vocab_size=tokenizer.vocab_size,
-        max_seq_len=configs["max_seq_len"],
-        num_layers=configs["num_layers"],
-        num_heads=configs["num_heads"],
-        dropout=configs["dropout"],
-    )
-    model.load_state_dict(torch.load(configs["model_path"], map_location=device))
-    model.to(device)
-    model.eval()
-    print(f"Done load model on the {device} device")
-    return model, tokenizer, device
-
-
 # Evaluate model on test dataset
 def evaluate():
-    output_dir = "./results"
-    if not os.path.exists(output_dir):
-        os.mkdir(output_dir)
+    import argparse
+    parser = argparse.ArgumentParser()
+    # Model parameters
+    parser.add_argument("--embedding_dim", "-ed", type=int, default=512, help="Embedding dimension (embedding_dim must be a divisor of 7*7*2048)")
+    parser.add_argument("--attention_dim", "-ad", type=int, default=256, help="Attention dim")
+    parser.add_argument("--tokenizer", "-t", type=str, default="bert-base-uncased", help="Bert tokenizer")
+    parser.add_argument("--max_seq_len", "-msl", type=int, default=128, help="Maximum sequence length for caption generation")
+    parser.add_argument("--num_layers", "-nl", type=int, default=8, help="Number of layers in the transformer decoder")
+    parser.add_argument("--num_heads", "-nh", type=int, default=8, help="Number of heads in multi-head attention")
+    parser.add_argument("--dropout", "-dr", type=float, default=0.1, help="Dropout probability")
+    # Training parameters
+    parser.add_argument("--model_path", "-md", type=str, default="./pretrained/model_image_captioning_eff_transfomer.pt", help="Path to save model")
+    parser.add_argument("--device", "-d", type=str, default="cuda:0", help="Device to use {cpu, cuda:0, cuda:1,...}")
+    # Data parameters
+    parser.add_argument("--image_dir", "-id", type=str, default="../coco/", help="Path to image directory, this contains train2014, val2014")
+    parser.add_argument("--karpathy_json_path", "-kap", type=str, default="../coco/karpathy/dataset_coco.json", help="Path to karpathy json file")
+    parser.add_argument("--val_annotation_path", "-vap", type=str, default="../coco/annotations/captions_val2014.json", help="Path to validation annotation file")
+    parser.add_argument("--train_annotation_path", "-tap", type=str, default="../coco/annotations/captions_train2014.json", help="Path to training annotation file")
+    # Output parameters
+    parser.add_argument("--output_dir", "-o", type=str, default="./results/", help="Directory to save results")
+    args = parser.parse_args()
+
+    # Create output directory
+    if not os.path.exists(args.output_dir):
+        os.mkdir(args.output_dir)
 
     # Load model and tokenizer
-    model, tokenizer, device = load_model_tokenizer(configs)
+    device = torch.device(args.device)
+    tokenizer = BertTokenizer.from_pretrained(args.tokenizer)
+    model_configs = {
+        "embedding_dim": args.embedding_dim,
+        "attention_dim": args.attention_dim,
+        "vocab_size": tokenizer.vocab_size,
+        "max_seq_len": args.max_seq_len,
+        "num_layers": args.num_layers,
+        "num_heads": args.num_heads,
+        "dropout": args.dropout,
+    }
+    # Load model ImageCaptionModel
+    start_time = time.time()
+    model = ImageCaptionModel(**model_configs)
+    model.load_state_dict(torch.load(args.model_path, map_location=device))
+    model.to(device)
+    model.eval()
+    time_load_model = str(timedelta(seconds=int(time.time() - start_time)))
+    print(f"Done load model on the {device} device in {time_load_model}")
+
     # Load test dataset
-    test_dataset = ImageCaptionDataset(
-        karpathy_json_path=configs["karpathy_json_path"],
-        image_dir=configs["image_dir"],
-        tokenizer=tokenizer,
-        max_seq_len=configs["max_seq_len"],
-        transform=transform, 
-        phase="test"
-    )
+    kaparthy = json.load(open(args.karpathy_json_path, "r"))
+    image_paths = [os.path.join(args.image_dir, image["filepath"], image["filename"]) for image in kaparthy["images"] if image["split"] == "test"]
+    image_ids = [image["cocoid"] for image in kaparthy["images"] if image["split"] == "test"]
     # Evaluate model
     model.eval()
 
     # convert karpathy json to coco format for evaluation
-    ann = convert_karpathy_to_coco_format(karpathy_path=configs["karpathy_json_path"], coco_path=configs["val_annotation_path"])
-    ann_path = os.path.join(output_dir, f"coco_annotation_test.json")
+    ann = convert_karpathy_to_coco_format(karpathy_path=args.karpathy_json_path, annotation_path=args.val_annotation_path)
+    ann_path = os.path.join(args.output_dir, "coco_annotation_test.json")
     json.dump(ann, open(ann_path, "w"))
 
-        
+    # Evaluate model on test dataset with beam search and save results
     beam_size = [3, 4, 5]
     scores = {}
+    
     for b in beam_size:
         prediction = []
-        for i in tqdm(range(len(test_dataset))):
-            image, all_caps, image_id = test_dataset[i]["image"], test_dataset[i]["all_captions_seq"], test_dataset[i]["image_id"]
-            image = image.unsqueeze(0)
-
-            # Generate caption
-            cap = generate_caption(model=model, image=image, tokenizer=tokenizer, beam_size=b, device=device, print_process=False)
+        for image_path, image_id in tqdm(zip(image_paths, image_ids), total=len(image_paths)):
+            cap = generate_caption(model=model, image_path=image_path, transform=transform, tokenizer=tokenizer, beam_size=b, device=device)
             prediction.append({"image_id": image_id, "caption": cap})
         # Save prediction
-        predict_path = os.path.join(output_dir, f"prediction_beam_size_{b}.json")
+        predict_path = os.path.join(args.output_dir, f"prediction_beam_size_{b}.json")
         json.dump(prediction, open(predict_path, "w"))
         # Calculate metrics
 
         score = metric_scores(annotation_path=ann_path, prediction_path=predict_path)
-        scores["beam{}".format(b)] = score
+        scores[f"beam{b}"] = score
     
-    # print scores
-    for k, v in scores.items():
-        print(f"{k}: {v}")
-    # Save scores
-    json.dump(scores, open(f"results/scores.json", "w"))
+    # print metrics scores and save scores
+    scores_path = os.path.join(args.output_dir, "scores.json")
+    json.dump(scores, open(scores_path, "w"))
 
+    print("--------------------- Done ----------------------------")
+    print(f"Scores saved in {scores_path}")
+    for b in beam_size:        
+        print("Beam size {}, prediction saved in {}".format(b, os.path.join(args.output_dir, f"prediction_beam_size_{b}.json")))
+        res = scores[f'beam{b}']
+        for k, v in res.items():
+            print(f"----- {k}: {v}")
+    print("-------------------------------------------------------")
 
 if __name__ == "__main__":
     evaluate()
