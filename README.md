@@ -16,13 +16,16 @@ Image Captioning by deep learning model with Encoder as Efficientnet and Decoder
 - [7. Conclusion](#7-conclusion)
 
 # 1. Objective
+
 The objective of this project is to build a model that can generate captions for images.
 
 # 2. Model
+
 I use Encoder as Efficientnet to extract features from image and Decoder as Transformer to generate caption. But I also change the attention mechanism at step attention encoder output. Instead of using the Multi-Head Attention mechanism, I use the Attention mechanism each step to attend image features.
 <figure align="center">
-    <img src="./images/model_architecture.png" width="600"/>
+  <p align="center"><img src="./images/model_architecture.png" width="600"/>
     <figcaption>Model architecture: The architecture of the model Image Captioning with Encoder as Efficientnet and Decoder as Transformer</figcaption>
+  </p>
 </figure>
 
 # 3. Dataset
@@ -38,9 +41,8 @@ In Andrej's split, the images are divided into train, val and test sets with the
 
 
 
-
 # 4. Training and Validation: Image Captioning
-## 4.1. Training
+## Pre-processing
 ### 4.1.1. Images
 I preprocessed the images with the following steps:
 - Resize the images to 256x256 pixels.
@@ -67,24 +69,33 @@ I use BERTTokenizer to tokenize the captions.
 ```python
 from transformers import BertTokenizer
 
+tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 token = tokenizer(caption, max_length=max_seq_len, padding="max_length", truncation=True, return_tensors="pt")["input_ids"][0]
 ```
 
-For more details, see `datasets.py`.
+For more details, see `datasets.py` file.
 
-### 4.1.3. Hyperparameters
-- Epochs: 50
-- Batch size: 32
-- Max sequence length: 128
-- Learning rate: 1e-4
-- Optimizer: Adam
-- Adam beta: (0.9, 0.98)
-- Adam eps: 1e-09
-- Loss: Cross-entropy
-- Metric: BLEU-4
-- Early stopping: 5
+## 4.2. Training
+### 4.2.1 Model configs
 
-All the hyperparameters are defined in `utils.py`. So, you can change the hyperparameters by yourself easily.
+- embedding_dim: 512
+- attention_dim: 256
+- vocab_size: 30522
+- max_seq_len: 128
+- num_layers: 6
+- num_heads: 8
+- dropout: 0.1
+
+### 4.2.2. Hyperparameters
+
+- n_epochs: 50
+- batch_size: 32
+- learning_rate: 1e-4
+- optimizer: Adam
+- adam parameters: betas=(0.9, 0.98), eps=1e-9
+- loss: CrossEntropyLoss
+- metric: bleu-4
+- early_stopping: 5
 
 ## 4.2. Validation
 I evaluate the model on the validation set after each epoch. For each image, I generate a caption and evaluate the BLEU-4 score with list of reference captions by sentence_bleu. And for all the images, I calculate the BLEU-4 score with the corpus_bleu function from NLTK.
@@ -92,6 +103,8 @@ I evaluate the model on the validation set after each epoch. For each image, I g
 You can see the detaile in the `train.py` file.
 
 # 5. Evaluation
+See the `evaluation.py` file.
+
 To evaluate the model, I used the [pycocoevalcap package](https://github.com/salaniz/pycocoevalcap). Install it by `pip install pycocoevalcap`. And this package need to be Java 1.8.0 installed.
 ```bash
 sudo apt-get update
@@ -105,26 +118,23 @@ I use beam search to generate captions with beam size of 3, 4, 5. I use the BLEU
 
 | Metrics | BLEU-4 | METEOR | ROUGE-L | CIDEr | SPICE |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| Beam Size 3 | 0.8 | 0.8 | 0.8 | 0.8 | 0.8 |
-| Beam Size 4 | 0.8 | 0.8 | 0.8 | 0.8 | 0.8 |
-| Beam Size 5 | 0.8 | 0.8 | 0.8 | 0.8 | 0.8 |
+| Beam Size 3 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 |
+| Beam Size 4 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 |
+| Beam Size 5 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 |
 
 # 6. Inferece
 See the file `caption.py`.
 ```python
-from utils import configs
-from evaluation import load_model_tokenizer, generate_caption
-
-model, tokenizer, device = load_model_tokenizer(configs)
+from evaluation import generate_caption
 
 cap = generate_caption(
     model=model,
-    image=preprocess_image("./images/test.jpg", transform),
+    image_path=image_path,
+    transform=transform,
     tokenizer=tokenizer,
-    max_seq_len=configs["max_seq_len"],
-    beam_size=3,
-    device=device,
-    print_process=False
+    max_seq_len=args.max_seq_len,
+    beam_size=args.beam_size,
+    device=device
 )
 print("--- Caption: {}".format(cap))
 ```
