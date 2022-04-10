@@ -161,7 +161,7 @@ def train(model, train_loader, valid_loader, optim, criterion, start_epoch, n_ep
 
         torch.cuda.empty_cache()
         
-        print(f"---- Epoch {epoch+1}/{n_epochs} | Train Loss: {train_loss:.5f} | Valid Loss: {val_loss:.5f} | Validation BLEU-4: {val_bleu4:.5f} | Best BLEU-4: {best_val_bleu4:.5f} | Best Epoch: {best_epoch} | Time taken: {timedelta(seconds=int(time.time()-start_time))}")
+        print(f"---- Epoch {epoch+1}/{n_epochs} | Train Loss: {train_loss:.5f} | Valid Loss: {val_loss:.5f} | Train BLEU-4: {train_bleu4:.5f} | Validation BLEU-4: {val_bleu4:.5f} | Best BLEU-4: {best_val_bleu4:.5f} | Best Epoch: {best_epoch} | Time taken: {timedelta(seconds=int(time.time()-start_time))}")
     
     return log
 
@@ -170,21 +170,21 @@ def main():
     import argparse
     parser = argparse.ArgumentParser()
     # Model parameters
-    parser.add_argument("--embedding_dim", "-ed", type=int, default=512, help="Embedding dimension (embedding_dim must be a divisor of 7*7*2048)")
-    parser.add_argument("--attention_dim", "-ad", type=int, default=256, help="Attention dim")
+    parser.add_argument("--embedding_dim", "-ed", type=int, default=512, help="Embedding dimension")
     parser.add_argument("--tokenizer", "-t", type=str, default="bert-base-uncased", help="Bert tokenizer")
     parser.add_argument("--max_seq_len", "-msl", type=int, default=128, help="Maximum sequence length for caption generation")
-    parser.add_argument("--num_layers", "-nl", type=int, default=8, help="Number of layers in the transformer decoder")
+    parser.add_argument("--encoder_layers", "-ad", type=int, default=3, help="Number of layers in the transformer encoder")
+    parser.add_argument("--decoder_layers", "-nl", type=int, default=6, help="Number of layers in the transformer decoder")
     parser.add_argument("--num_heads", "-nh", type=int, default=8, help="Number of heads in multi-head attention")
     parser.add_argument("--dropout", "-dr", type=float, default=0.1, help="Dropout probability")
     # Training parameters
     parser.add_argument("--model_path", "-md", type=str, default="./pretrained/model_image_captioning_eff_transfomer.pt", help="Path to save model")
     parser.add_argument("--device", "-d", type=str, default="cuda:0", help="Device to use {cpu, cuda:0, cuda:1,...}")
     parser.add_argument("--batch_size", "-bs", type=int, default=16, help="Batch size")
-    parser.add_argument("--n_epochs", "-ne", type=int, default=50, help="Number of epochs")
+    parser.add_argument("--n_epochs", "-ne", type=int, default=25, help="Number of epochs")
     parser.add_argument("--start_epoch", "-se", type=int, default=0, help="Start epoch. If start_epoch > 0, load model from model_path and continue training")
     parser.add_argument("--learning_rate", "-lr", type=float, default=1e-4, help="Learning rate")
-    parser.add_argument("--betas", "-bt", type=tuple, default=(0.9, 0.98), help="Adam optimizer betas")
+    parser.add_argument("--betas", "-bt", type=tuple, default=(0.9, 0.999), help="Adam optimizer betas")
     parser.add_argument("--eps", "-eps", type=float, default=1e-9, help="Adam optimizer epsilon")
     parser.add_argument("--early_stopping", "-es", type=int, default=5, help="Early stopping")
     # Data parameters
@@ -198,10 +198,8 @@ def main():
     args = parser.parse_args()
 
 
-    print("-------- Training parameters ------------")
+    print("------------ Training parameters ----------------")
     print(args)
-    print("-----------------------------------------")
-    print("-------- Check directory existence ------------")
     if not os.path.exists(args.log_visualize_dir):
         print(f"Create directory {args.log_visualize_dir}")
         os.makedirs(args.log_visualize_dir)
@@ -210,24 +208,24 @@ def main():
         print(f"Create directory {model_path_dir}")
         os.makedirs(model_path_dir)
     if not os.path.exists(args.image_dir):
-        print("Directory image_dir {} does not exist".format(args.image_dir))
+        print(f"Directory image_dir {args.image_dir} does not exist")
         return
-    print("-----------------------------------------")
+    print("-------------------------------------------------")
 
 
     device = torch.device(args.device)
     tokenizer = AutoTokenizer.from_pretrained(args.tokenizer)
     model = ImageCaptionModel(
         embedding_dim=args.embedding_dim,
-        attention_dim=args.attention_dim,
         vocab_size=tokenizer.vocab_size,
         max_seq_len=args.max_seq_len,
-        num_layers=args.num_layers,
+        encoder_layers=args.encoder_layers,
+        decoder_layers=args.decoder_layers,
         num_heads=args.num_heads,
         dropout=args.dropout,
     )
-    print("Model to {}".format(device))
     model.to(device)
+    print("Model to {}".format(device))
 
     criterion = nn.CrossEntropyLoss(ignore_index=tokenizer.pad_token_id)
     optim = torch.optim.Adam(model.parameters(), lr=args.learning_rate, betas=args.betas, eps=args.eps)

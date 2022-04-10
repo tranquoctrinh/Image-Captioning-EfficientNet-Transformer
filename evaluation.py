@@ -87,11 +87,11 @@ def evaluate():
     import argparse
     parser = argparse.ArgumentParser()
     # Model parameters
-    parser.add_argument("--embedding_dim", "-ed", type=int, default=512, help="Embedding dimension (embedding_dim must be a divisor of 7*7*2048)")
-    parser.add_argument("--attention_dim", "-ad", type=int, default=256, help="Attention dim")
+    parser.add_argument("--embedding_dim", "-ed", type=int, default=512, help="Embedding dimension")
     parser.add_argument("--tokenizer", "-t", type=str, default="bert-base-uncased", help="Bert tokenizer")
     parser.add_argument("--max_seq_len", "-msl", type=int, default=128, help="Maximum sequence length for caption generation")
-    parser.add_argument("--num_layers", "-nl", type=int, default=8, help="Number of layers in the transformer decoder")
+    parser.add_argument("--encoder_layers", "-ad", type=int, default=3, help="Number of layers in the transformer encoder")
+    parser.add_argument("--decoder_layers", "-nl", type=int, default=6, help="Number of layers in the transformer decoder")
     parser.add_argument("--num_heads", "-nh", type=int, default=8, help="Number of heads in multi-head attention")
     parser.add_argument("--dropout", "-dr", type=float, default=0.1, help="Dropout probability")
     # Training parameters
@@ -115,10 +115,10 @@ def evaluate():
     tokenizer = BertTokenizer.from_pretrained(args.tokenizer)
     model_configs = {
         "embedding_dim": args.embedding_dim,
-        "attention_dim": args.attention_dim,
         "vocab_size": tokenizer.vocab_size,
         "max_seq_len": args.max_seq_len,
-        "num_layers": args.num_layers,
+        "encoder_layers": args.encoder_layers,
+        "decoder_layers": args.decoder_layers,
         "num_heads": args.num_heads,
         "dropout": args.dropout,
     }
@@ -144,7 +144,7 @@ def evaluate():
     json.dump(ann, open(ann_path, "w"))
 
     # Evaluate model on test dataset with beam search and save results
-    beam_size = [3, 4, 5]
+    beam_size = [3]
     scores = {}
     
     for b in beam_size:

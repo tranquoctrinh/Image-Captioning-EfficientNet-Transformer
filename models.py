@@ -135,15 +135,12 @@ class EncoderLayer(nn.Module):
 
 # Encoder transformer
 class Encoder(nn.Module):
-    def __init__(self, embedding_dim, num_heads, num_layers, max_seq_len, dropout=0.1, depth=5, fine_tune=True):
+    def __init__(self, embedding_dim, max_seq_len, encoder_layers, num_heads, dropout=0.1, depth=5, fine_tune=True):
         super(Encoder, self).__init__()
         self.eff = EfficientNet.from_pretrained(f'efficientnet-b{depth}')
         self.set_fine_tune(fine_tune)
         self.avg_pool = nn.AdaptiveAvgPool2d((max_seq_len-1, 512))
-
-        self.num_layers = num_layers
-        self.num_heads = num_heads
-        self.layers = nn.ModuleList([EncoderLayer(embedding_dim, num_heads, 2048, dropout) for _ in range(num_layers)])
+        self.layers = nn.ModuleList([EncoderLayer(embedding_dim, num_heads, 2048, dropout) for _ in range(encoder_layers)])
         self.norm = Norm(embedding_dim)
     
     def forward(self, image):
@@ -165,11 +162,9 @@ class Encoder(nn.Module):
 
 # Transformer decoder layer
 class DecoderLayer(nn.Module):
-    def __init__(self, embedding_dim, attention_dim, num_heads, ff_dim=2048, dropout=0.1):
+    def __init__(self, embedding_dim, num_heads, ff_dim=2048, dropout=0.1):
         super(DecoderLayer, self).__init__()
         self.embedding_dim = embedding_dim
-        self.attention_dim = attention_dim
-        self.num_heads = num_heads
         self.self_attention = MultiHeadAttention(embedding_dim, num_heads, dropout)
         self.encoder_attention = MultiHeadAttention(embedding_dim, num_heads, dropout)
         self.feed_forward = nn.Sequential(
@@ -196,12 +191,12 @@ class DecoderLayer(nn.Module):
 
 # Decoder model image captioning with Attention
 class Decoder(nn.Module):
-    def __init__(self, embedding_dim, attention_dim, vocab_size, max_seq_len, num_layers, num_heads, dropout=0.1):
+    def __init__(self, embedding_dim, vocab_size, max_seq_len, decoder_layers, num_heads, dropout=0.1):
         super(Decoder, self).__init__()
         self.embedding_dim = embedding_dim
         self.vocab_size = vocab_size
         self.embed = nn.Embedding(vocab_size, embedding_dim)
-        self.layers = nn.ModuleList([DecoderLayer(embedding_dim, attention_dim, num_heads, 2048, dropout) for _ in range(num_layers)])
+        self.layers = nn.ModuleList([DecoderLayer(embedding_dim, num_heads, 2048, dropout) for _ in range(decoder_layers)])
         self.dropout = nn.Dropout(dropout)
         self.norm = Norm(embedding_dim)
         self.position_embedding = PositionalEncoder(embedding_dim, max_seq_len, dropout)
@@ -219,10 +214,10 @@ class Decoder(nn.Module):
 
 # Model image captioning with Attention
 class ImageCaptionModel(nn.Module):
-    def __init__(self, embedding_dim, attention_dim, vocab_size, max_seq_len, num_layers, num_heads, dropout=0.1):
+    def __init__(self, embedding_dim, vocab_size, max_seq_len, encoder_layers, decoder_layers, num_heads, dropout=0.1):
         super(ImageCaptionModel, self).__init__()
-        self.encoder = Encoder(embedding_dim, num_heads, 3, max_seq_len, dropout, depth=5, fine_tune=True)
-        self.decoder = Decoder(embedding_dim, attention_dim, vocab_size, max_seq_len, num_layers, num_heads, dropout)
+        self.encoder = Encoder(embedding_dim, max_seq_len, encoder_layers, num_heads, dropout)
+        self.decoder = Decoder(embedding_dim, vocab_size, max_seq_len, decoder_layers, num_heads, dropout)
         self.embed = nn.Embedding(vocab_size, embedding_dim)
         self.norm = Norm(embedding_dim)
         self.fc = nn.Linear(embedding_dim, vocab_size)
@@ -247,22 +242,3 @@ class ImageCaptionModel(nn.Module):
         batch_size, len_target = target_ids.size()
         subsequent_mask = (1 - torch.triu(torch.ones((1, len_target, len_target), device=target_ids.device), diagonal=1)).bool()
         return subsequent_mask
-
-def main():
-    # transform
-    transform = transforms.Compose([
-        transforms.Resize(256),
-        transforms.CenterCrop(224),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    ])
-
-    batch_size = 4
-    max_seq_len = 128
-    vocab_size = 123456
-    model = ImageCaptionModel(embedding_dim=512, attention_dim=256, vocab_size=vocab_size, max_seq_len=max_seq_len, num_layers=8, num_heads=8, dropout=0.1)
-    out = model(torch.randn(batch_size, 3, 224, 224), torch.randint(0, vocab_size, (batch_size, max_seq_len)))
-    print(out.size())
-
-if __name__ == "__main__":
-    main()
