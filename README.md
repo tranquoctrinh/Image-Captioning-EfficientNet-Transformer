@@ -269,4 +269,6 @@ print("--- Caption: {}".format(cap))
      <td>A brown and white dog standing on top of a grass-covered field.</td>
   </tr>
  </table>
+
+ 
 # 7. Conclusion
