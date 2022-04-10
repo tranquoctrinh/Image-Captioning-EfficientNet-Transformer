@@ -1,21 +1,23 @@
 <!-- # Image Captioning
 Image Captioning by deep learning model with Encoder as Efficientnet and Decoder as Decoder of Transformer -->
-# Table of Contents
-- [Table of Contents](#table-of-contents)
-- [1. Objective](#1-objective)
-- [2. Model](#2-model)
-- [3. Dataset](#3-dataset)
-- [4. Training and Validation: Image Captioning](#4-training-and-validation-image-captioning)
-  - [4.1. Training](#41-training)
-    - [4.1.1. Images](#411-images)
-    - [4.1.2. Captions](#412-captions)
-    - [4.1.3. Hyperparameters](#413-hyperparameters)
-  - [4.2. Validation](#42-validation)
-- [5. Evaluation](#5-evaluation)
-- [6. Inferece](#6-inferece)
-- [7. Conclusion](#7-conclusion)
+# 1. Table of Contents
+- [1. Table of Contents](#1-table-of-contents)
+- [2. Objective](#2-objective)
+- [3. Model](#3-model)
+- [4. Dataset](#4-dataset)
+- [5. Training and Validation](#5-training-and-validation)
+  - [5.1. Pre-processing](#51-pre-processing)
+    - [5.1.1. Images](#511-images)
+    - [5.1.2. Captions](#512-captions)
+  - [5.2. Training](#52-training)
+    - [5.2.1. 4.2.1 Model configs](#521-421-model-configs)
+    - [5.2.2. Hyperparameters](#522-hyperparameters)
+  - [5.3. Validation](#53-validation)
+- [6. Evaluation](#6-evaluation)
+- [7. Inferece](#7-inferece)
+- [8. Conclusion](#8-conclusion)
 
-# 1. Objective
+# 2. Objective
 
 The objective of this project is to build a model that can generate captions for images.
 
@@ -43,7 +45,7 @@ root/
     ├── train.py
     └── utils.py
 ```
-# 2. Model
+# 3. Model
 
 I use Encoder as Efficientnet to extract features from image and Decoder as Transformer to generate caption. But I also change the attention mechanism at step attention encoder output. Instead of using the Multi-Head Attention mechanism, I use the Attention mechanism each step to attend image features.
 <figure align="center">
@@ -52,7 +54,7 @@ I use Encoder as Efficientnet to extract features from image and Decoder as Tran
   </p>
 </figure>
 
-# 3. Dataset
+# 4. Dataset
 I'm using the MSCOCO '14 Dataset. You'd need to download the Training (13GB),  Validation (6GB) and Test (6GB) splits from [MSCOCO](http://cocodataset.org/#download) and place them in the `../coco` directory.
 
 I'm also using Andrej Karpathy's split of the MSCOCO '14 dataset. It contains caption annotations for the MSCOCO, Flickr30k, and Flickr8k datasets. You can download it from [here](http://cs.stanford.edu/people/karpathy/deepimagesent/caption_datasets.zip). You'd need to unzip it and place it in the `../coco/karpathy` directory.
@@ -65,9 +67,9 @@ In Andrej's split, the images are divided into train, val and test sets with the
 
 
 
-# 4. Training and Validation: Image Captioning
-## Pre-processing
-### 4.1.1. Images
+# 5. Training and Validation
+## 5.1. Pre-processing
+### 5.1.1. Images
 I preprocessed the images with the following steps:
 - Resize the images to 256x256 pixels.
 - Convert the images to RGB.
@@ -86,7 +88,7 @@ transform = transforms.Compose([
 ```
 
 
-### 4.1.2. Captions
+### 5.1.2. Captions
 Captions are both the target and the inputs of the Decoder as each word is used to generate the next word.
 
 I use BERTTokenizer to tokenize the captions.
@@ -99,8 +101,8 @@ token = tokenizer(caption, max_length=max_seq_len, padding="max_length", truncat
 
 For more details, see `datasets.py` file.
 
-## 4.2. Training
-### 4.2.1 Model configs
+## 5.2. Training
+### 5.2.1. 4.2.1 Model configs
 
 - embedding_dim: 512
 - vocab_size: 30522
@@ -110,7 +112,7 @@ For more details, see `datasets.py` file.
 - num_heads: 8
 - dropout: 0.1
 
-### 4.2.2. Hyperparameters
+### 5.2.2. Hyperparameters
 
 - n_epochs: 25
 - batch_size: 24
@@ -121,7 +123,7 @@ For more details, see `datasets.py` file.
 - metric: bleu-4
 - early_stopping: 5
 
-## 4.2. Validation
+## 5.3. Validation
 I evaluate the model on the validation set after each epoch. For each image, I generate a caption and evaluate the BLEU-4 score with list of reference captions by sentence_bleu. And for all the images, I calculate the BLEU-4 score with the corpus_bleu function from NLTK.
 
 You can see the detaile in the `train.py` file. Run `train.py` to train the model.
@@ -147,7 +149,7 @@ python train.py \
     --log_visualize_dir ./images/
 ```
 
-# 5. Evaluation
+# 6. Evaluation
 See the `evaluation.py` file. Run `evaluation.py` to evaluate the model.
 
 ```bash
@@ -184,7 +186,7 @@ I use beam search to generate captions with beam size of 3. I use the BLEU-1, BL
 | 0.675 | 0.504 | 0.372 | 0.273 | 0.259 | 0.521 | 0.933 | 0.190 |
 
 
-# 6. Inferece
+# 7. Inferece
 See the file `caption.py`. Run `caption.py` to generate captions for the test images. If you don't have resouces for training, you can download the pretrained model from [here](https://drive.google.com/file/d/1CcCPJ-cCfosGe7iOaPPbA3EJzNxsKuc_/view?usp=sharing).
 
 ```bash
@@ -270,5 +272,5 @@ print("--- Caption: {}".format(cap))
   </tr>
  </table>
 
- 
-# 7. Conclusion
+
+# 8. Conclusion
